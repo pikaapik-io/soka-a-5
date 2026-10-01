@@ -20,7 +20,10 @@ public final class Experiment {
 		1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000
 	};
 
-	Scheduler scheduler = new KpbScheduler();
+	double kPercent = args.length > 1
+		? Double.parseDouble(args[1])
+		: KpbScheduler.DEFAULT_K_PERCENT;
+	Scheduler scheduler = new KpbScheduler(kPercent);
 	int[] mapping = scheduler.schedule(taskLengths, vmCapacities);
 	Result result = MetricsCollector.collect(scheduler.getName(), taskLengths,
 		vmCapacities, mapping);

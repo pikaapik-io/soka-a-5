@@ -3,47 +3,88 @@ package project.scheduler;
 import java.util.Arrays;
 
 /**
- * Capacity-aware list scheduling. Tasks are considered longest first and are
- * assigned to the VM with the smallest projected completion time.
+ * K-Percent Best (KPB) heuristic (Maheswaran et al., 1999).
+ *
+ * Tasks are processed in arrival order (no sorting). For each task, only the
+ * k% of VMs with the smallest execution time for that task are considered,
+ * and the task is assigned to the candidate with the smallest completion time
+ * (VM ready time + execution time).
+ *
+ * k = 100% behaves like MCT; k = 100/m % behaves like MET.
  */
 public final class KpbScheduler implements Scheduler {
 
+	public static final double DEFAULT_K_PERCENT = 20.0;
+
+	private final double kPercent;
+
+	public KpbScheduler() {
+		this(DEFAULT_K_PERCENT);
+	}
+
+	public KpbScheduler(double kPercent) {
+		if (!Double.isFinite(kPercent) || kPercent <= 0 || kPercent > 100) {
+			throw new IllegalArgumentException("k must be in the range (0, 100]");
+		}
+		this.kPercent = kPercent;
+	}
+
 	@Override
 	public String getName() {
-		return "KPB";
+		return "KPB(k=" + kPercent + "%)";
+	}
+
+	public double kPercent() {
+		return kPercent;
+	}
+
+	/** Number of candidate VMs: ceil(k% x m), at least one. */
+	public int subsetSize(int vmCount) {
+		return Math.max(1, Math.min(vmCount, (int) Math.ceil(kPercent / 100.0 * vmCount)));
 	}
 
 	@Override
 	public int[] schedule(double[] taskLength, double[] vmCapacity) {
 		validate(taskLength, vmCapacity);
 
-		Integer[] taskOrder = new Integer[taskLength.length];
-		for (int i = 0; i < taskLength.length; i++) {
-			taskOrder[i] = i;
-		}
-		Arrays.sort(taskOrder, (left, right) -> {
-			int byLength = Double.compare(taskLength[right], taskLength[left]);
-			return byLength != 0 ? byLength : Integer.compare(left, right);
-		});
-
-		double[] load = new double[vmCapacity.length];
+		int subsetSize = subsetSize(vmCapacity.length);
+		double[] readyTime = new double[vmCapacity.length];
 		int[] mapping = new int[taskLength.length];
-		for (int task : taskOrder) {
-			int selectedVm = 0;
+
+		// Step 1: tasks are taken in arrival order (index order).
+		for (int task = 0; task < taskLength.length; task++) {
+			// Step 2: rank VMs by execution time for this task, keep the best k%.
+			Integer[] candidates = rankByExecutionTime(taskLength[task], vmCapacity);
+
+			// Step 3: among the candidates, choose the minimum completion time.
+			int selectedVm = candidates[0];
 			double bestFinish = Double.POSITIVE_INFINITY;
-			for (int vm = 0; vm < vmCapacity.length; vm++) {
-				double finish = load[vm] + taskLength[task] / vmCapacity[vm];
-				if (finish < bestFinish
-						|| (Double.compare(finish, bestFinish) == 0
-						&& vmCapacity[vm] > vmCapacity[selectedVm])) {
+			for (int c = 0; c < subsetSize; c++) {
+				int vm = candidates[c];
+				double finish = readyTime[vm] + taskLength[task] / vmCapacity[vm];
+				if (finish < bestFinish) {
 					bestFinish = finish;
 					selectedVm = vm;
 				}
 			}
+
+			// Step 4: commit the assignment and update the VM ready time.
 			mapping[task] = selectedVm;
-			load[selectedVm] += taskLength[task] / vmCapacity[selectedVm];
+			readyTime[selectedVm] = bestFinish;
 		}
 		return mapping;
+	}
+
+	private static Integer[] rankByExecutionTime(double length, double[] vmCapacity) {
+		Integer[] order = new Integer[vmCapacity.length];
+		for (int vm = 0; vm < vmCapacity.length; vm++) {
+			order[vm] = vm;
+		}
+		Arrays.sort(order, (left, right) -> {
+			int byExec = Double.compare(length / vmCapacity[left], length / vmCapacity[right]);
+			return byExec != 0 ? byExec : Integer.compare(left, right);
+		});
+		return order;
 	}
 
 	private static void validate(double[] taskLength, double[] vmCapacity) {
