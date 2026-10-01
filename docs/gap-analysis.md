@@ -16,7 +16,7 @@ Perbandingan **Draft Desain Awal Project Kelompok 5** dengan implementasi algori
 | **Java** | Java 17 | Java 11 | Lingkungan pengembangan (WSL2 Ubuntu) hanya memiliki OpenJDK 11.0.32 (/usr/lib/jvm/java-11-openjdk-amd64) |
 | **Alokasi VM** | `VmAllocationPolicySimple` | `VmAllocationPolicySimple` + filter C3–C6 (`ConstrainedPlacement`) | Policy bawaan melanggar C3 (temuan 4.4) |
 | **Penempatan VM ke DC** | Diserahkan ke broker | Direncanakan di awal dengan aturan yang sama | VM yang di-retry ke DC-2 tidak pernah menerima cloudlet (bagian 5) |
-| **Real world** | Belum dirancang | 20 container Docker dengan PE, CPU, RAM, jaringan DC, dan penempatan host sesuai desain | Tugas poin 5–6 |
+| **Real world** | Tidak dibahas (draft hanya mencakup simulasi CloudSim) | Sudah diimplementasikan: 20 container Docker dengan PE, CPU, RAM, jaringan DC, dan penempatan host sesuai desain | Diminta tugas poin 5–6 (implementasi dan ujicoba di real world) |
 
 ---
 
