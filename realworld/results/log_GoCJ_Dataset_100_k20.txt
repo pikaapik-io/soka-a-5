@@ -1,0 +1,19 @@
+scheduler=KPB(k=20.0%) realworld, placement cocok dengan CloudSim
+dataset=../src/main/resources/dataset/GoCJ_Dataset_100.txt tasks=100 subset=4 repeat=3 itersPerMI=14 scale=0.0254
+[run 1/3] menjalankan task di container... (prediksi analitik ±9.2 s)
+  makespan=14.082s, energy=0.003252 kWh, avgResponse=6.509s, utilization=18.59%, DI=5.3798 (VM terpakai 0.1141), throughput=7.101 task/s, cost=$82.18, schedulingTime=0.332 ms, vmsUsed=4/20
+[run 2/3] menjalankan task di container... (prediksi analitik ±9.2 s)
+  makespan=15.826s, energy=0.003628 kWh, avgResponse=6.498s, utilization=18.76%, DI=5.3311 (VM terpakai 0.1156), throughput=6.319 task/s, cost=$84.27, schedulingTime=0.515 ms, vmsUsed=4/20
+[run 3/3] menjalankan task di container... (prediksi analitik ±9.2 s)
+  makespan=14.523s, energy=0.003343 kWh, avgResponse=6.496s, utilization=18.34%, DI=5.4512 (VM terpakai 0.1298), throughput=6.886 task/s, cost=$82.71, schedulingTime=0.189 ms, vmsUsed=4/20
+rata-rata ± std dari 3 run:
+  makespan_s              14.8102 ± 0.9064
+  energy_kwh               0.0034 ± 0.0002
+  avg_response_s           6.5011 ± 0.0071
+  utilization_pct         18.5636 ± 0.2078
+  di_all_vm                5.3873 ± 0.0604
+  di_used_vm               0.1198 ± 0.0087
+  throughput_task_s        6.7686 ± 0.4040
+  cost_usd                83.0523 ± 1.0877
+  scheduling_ms            0.3452 ± 0.1635
+hasil -> results/summary.csv, results/aggregate.csv, results/tasks_GoCJ_Dataset_100_n100_k20_run*.csv

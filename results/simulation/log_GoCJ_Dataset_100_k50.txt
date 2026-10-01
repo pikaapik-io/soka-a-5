@@ -1,0 +1,8 @@
+placement=vm0:V3@DC1/H0 vm1:V3@DC1/H1 vm2:V3@DC1/H2 vm3:V3@DC1/H0 vm4:V2@DC1/H1 vm5:V2@DC1/H2 vm6:V2@DC1/H1 vm7:V2@DC1/H2 vm8:V2@DC2/H0 vm9:V2@DC2/H1 vm10:V2@DC2/H2 vm11:V2@DC2/H0 vm12:V1@DC2/H1 vm13:V1@DC2/H2 vm14:V1@DC2/H1 vm15:V1@DC2/H2 vm16:V1@DC2/H0 vm17:V1@DC2/H1 vm18:V1@DC2/H2 vm19:V1@DC2/H0
+scheduler=KPB(k=50.0%)
+tasks=100, vmsCreated=20/20, cloudletsFinished=100/100
+makespan=515.162 s (analitik 270.950 s), energy=0.1224 kWh, avgResponse=228.820 s
+utilization=34.54%, DI=2.8954 (VM terpakai 0.7216), throughput=0.1941 task/s
+cost=$684.67, schedulingTime=0.221 ms
+mapping=[0, 1, 2, 3, 2, 4, 3, 1, 0, 5, 6, 2, 7, 3, 1, 8, 9, 0, 4, 5, 1, 3, 0, 1, 6, 9, 8, 7, 4, 5, 0, 8, 6, 1, 0, 6, 9, 0, 3, 7, 4, 8, 1, 0, 6, 2, 3, 5, 1, 9, 0, 7, 8, 1, 0, 1, 6, 4, 5, 9, 8, 0, 6, 7, 0, 5, 9, 0, 0, 8, 4, 6, 7, 8, 5, 3, 9, 4, 3, 2, 6, 8, 3, 2, 5, 7, 5, 1, 3, 9, 1, 4, 7, 8, 3, 0, 3, 6, 5, 4]
+vmFinish=[515.16, 442.16, 373.05, 451.16, 317.16, 322.16, 283.41, 292.41, 303.37, 258.37, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
