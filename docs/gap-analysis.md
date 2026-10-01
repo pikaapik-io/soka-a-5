@@ -13,29 +13,15 @@ Perbandingan **Draft Desain Awal Project Kelompok 5** dengan implementasi algori
 | **Penggabungan objektif** | Weighted sum min-max, 3 konfigurasi bobot | Tidak dipakai | KPB memilih VM dengan completion time terkecil, tanpa fungsi fitness; makespan dan energi dilaporkan terpisah |
 | **Jumlah run** | 10 run dengan seed berbeda | Simulasi 1×, real world 3× | Simulasi deterministik (run ulang identik, std = 0); real world 10× butuh ±1,5 jam |
 | **Uji Wilcoxon** | Uji berpasangan | Tidak dipakai | Tidak ada pasangan pembanding untuk KPB, dan n = 3 terlalu kecil |
-| **Java** | Java 17 | Java 11 | Dijabarkan di bagian 3 |
+| **Java** | Java 17 | Java 11 | Lingkungan pengembangan (WSL2 Ubuntu) hanya memiliki OpenJDK 11.0.32 (/usr/lib/jvm/java-11-openjdk-amd64) |
 | **Alokasi VM** | `VmAllocationPolicySimple` | `VmAllocationPolicySimple` + filter C3–C6 (`ConstrainedPlacement`) | Policy bawaan melanggar C3 (temuan 4.4) |
 | **Penempatan VM ke DC** | Diserahkan ke broker | Direncanakan di awal dengan aturan yang sama | VM yang di-retry ke DC-2 tidak pernah menerima cloudlet (bagian 5) |
 | **Real world** | Belum dirancang | 20 container Docker dengan PE, CPU, RAM, jaringan DC, dan penempatan host sesuai desain | Tugas poin 5–6 |
 
 ---
 
-## 2. Alasan Java 11, Bukan Java 17
 
-| Faktor | Keterangan |
-|:---|:---|
-| JDK yang tersedia | Lingkungan pengembangan (WSL2 Ubuntu) hanya memiliki OpenJDK 11.0.32 (`/usr/lib/jvm/java-11-openjdk-amd64`); JDK 17 tidak terpasang |
-| Kebutuhan CloudSim Plus | Proyek memakai CloudSim Plus **6.6.1**, yang dikompilasi untuk Java 8 (class file version 52), sehingga berjalan di Java 11 tanpa masalah |
-| Kapan Java 17 wajib | Java 17 baru diwajibkan mulai CloudSim Plus **7.0.0** (`<release>17</release>`; versi 8.0.0 memakai class file version 61) |
-| Biaya upgrade ke CloudSim Plus 7/8 | Nama package berubah dari `org.cloudbus.cloudsim.*` ke `org.cloudsimplus.*`, sehingga semua import dan sebagian API harus ditulis ulang tanpa menambah fitur yang dibutuhkan desain |
-| Fitur yang dibutuhkan desain | Semua komponen desain (2 DC, `PowerModelHostSimple`, `VmCost`, `VmAllocationPolicySimple`, `CloudletSchedulerTimeShared`, `UtilizationModelDynamic`) sudah tersedia di 6.6.1 |
-| Fitur bahasa | Kode tidak memakai fitur Java 12+ (record, text block, switch expression, pattern matching), sehingga tidak ada bagian yang membutuhkan Java 17 |
-| Kompatibilitas ke depan | `pom.xml` memakai `maven.compiler.release` 11; kode ini dapat dikompilasi oleh JDK 17 tanpa perubahan (belum diuji karena JDK 17 tidak tersedia) |
-| Konsistensi tim | Semua anggota cukup memasang JDK 11+, yang tersedia di repositori paket Ubuntu standar tanpa konfigurasi tambahan |
-
----
-
-## 3. Gap Simulasi vs Real World
+## 2. Gap Simulasi vs Real World
 
 | Aspek | Simulasi (CloudSim) | Real world (Docker) | Dampak |
 |:---|:---|:---|:---|
