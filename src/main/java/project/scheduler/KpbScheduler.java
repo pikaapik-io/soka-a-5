@@ -28,6 +28,7 @@ public final class KpbScheduler implements Scheduler {
 		return kPercent;
 	}
 
+	// ★ TUNJUK: s = ceil(k% x m) - k=20% -> 4 VM, k=50% -> 10 VM, k=100% -> 20 VM (setara MCT).
 	/** Number of candidate VMs: ceil(k% x m), at least one. */
 	public int subsetSize(int vmCount) {
 		return Math.max(1, Math.min(vmCount, (int) Math.ceil(kPercent / 100.0 * vmCount)));
@@ -41,12 +42,12 @@ public final class KpbScheduler implements Scheduler {
 		double[] readyTime = new double[vmCapacity.length];
 		int[] mapping = new int[taskLength.length];
 
-		// Step 1: tasks are taken in arrival order (index order).
+		// ★ TUNJUK: Langkah 1 - task diproses sesuai urutan kedatangan, TIDAK diurutkan dulu (beda dengan LJFP).
 		for (int task = 0; task < taskLength.length; task++) {
-			// Step 2: rank VMs by execution time for this task, keep the best k%.
+			// ★ TUNJUK: Langkah 2-3 - ranking VM berdasarkan waktu eksekusi (ETC = L/C), ambil subset k% terbaik.
 			Integer[] candidates = rankByExecutionTime(taskLength[task], vmCapacity);
 
-			// Step 3: among the candidates, choose the minimum completion time.
+			// ★ TUNJUK: Langkah 4 - di antara subset k%, pilih VM dengan completion time (ready + ETC) terkecil.
 			int selectedVm = candidates[0];
 			double bestFinish = Double.POSITIVE_INFINITY;
 			for (int c = 0; c < subsetSize; c++) {
@@ -58,7 +59,7 @@ public final class KpbScheduler implements Scheduler {
 				}
 			}
 
-			// Step 4: commit the assignment and update the VM ready time.
+			// ★ TUNJUK: Langkah 5 - commit assignment lalu perbarui ready time VM terpilih.
 			mapping[task] = selectedVm;
 			readyTime[selectedVm] = bestFinish;
 		}

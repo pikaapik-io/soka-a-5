@@ -34,10 +34,9 @@
   - [7.5 Analisis Real-World](#75-analisis-real-world)
   - [7.6 Batasan Real-World](#76-batasan-real-world)
 - [8. Panduan Menjalankan Sim](#8-panduan-menjalankan-sim)
-- [9. Checklist Demo: Cek KPB Berhasil](#9-checklist-demo-cek-kpb-berhasil)
-- [10. Struktur Direktori](#10-struktur-direktori)
-- [11. Status dan Batasan](#11-status-dan-batasan)
-- [12. Referensi](#12-referensi)
+- [9. Struktur Direktori](#9-struktur-direktori)
+- [10. Status dan Batasan](#10-status-dan-batasan)
+- [11. Referensi](#11-referensi)
 
 ---
 
@@ -481,14 +480,46 @@ curl http://127.0.0.1:9119/health
 python3 kpb_realworld.py --limit 20 --repeat 1 --out results_demo
 ```
 
-Kalau muncul `placement cocok dengan CloudSim` dan baris `makespan=...`, setup sudah benar. Folder `results_demo/` boleh dihapus setelahnya.
+Selama berjalan, terminal menampilkan **log broker real-time**. Setiap baris muncul saat cloudlet benar-benar selesai di container-nya. Angka di kiri adalah detik sejak batch dikirim:
+
+```text
+scheduler=KPB(k=20.0%) realworld, placement cocok dengan CloudSim
+dataset=../src/main/resources/dataset/GoCJ_Dataset_100.txt tasks=20 subset=4 repeat=1 itersPerMI=14 scale=0.0328
+[run 1/1] menjalankan task di container... (prediksi analitik ±2.9 s)
+     0.00: Broker: Mengirim Cloudlet #0 (127000 MI) ke vm00 (V3) di DC-1/Host A0
+     0.00: Broker: Mengirim Cloudlet #1 (83000 MI) ke vm01 (V3) di DC-1/Host A1
+     ...
+     0.31: Broker: Cloudlet #5 selesai di vm03 (V3) di DC-1/Host A0, diterima broker
+     0.31: Broker: Jumlah cloudlet selesai: 1/20
+     0.49: Broker: Cloudlet #9 selesai di vm02 (V3) di DC-1/Host A2, diterima broker
+     0.49: Broker: Jumlah cloudlet selesai: 2/20
+     ...
+     1.27: Broker: vm00 (V3) selesai: 4 cloudlet, CPU terpakai 1.11 s
+     7.64: Broker: Cloudlet #11 selesai di vm02 (V3) di DC-1/Host A2, diterima broker
+     7.64: Broker: Jumlah cloudlet selesai: 20/20
+     7.65: Broker: vm02 (V3) selesai: 4 cloudlet, CPU terpakai 2.44 s
+     7.64: Broker: Semua cloudlet selesai (20/20). Finishing...
+  makespan=7.641s, energy=0.001620 kWh, ..., vmsUsed=4/20
+```
+
+| Baris log | Artinya |
+|:---|:---|
+| `Mengirim Cloudlet #i (L MI) ke vmXX (tipe) di DC-d/Host h` | Keputusan KPB: task i dikirim ke VM pilihan KPB, lengkap dengan DC dan host-nya |
+| `Cloudlet #i selesai di vmXX ..., diterima broker` | Task i selesai dieksekusi di container dan hasilnya kembali ke runner |
+| `Jumlah cloudlet selesai: x/N` | Progres keseluruhan |
+| `vmXX (tipe) selesai: n cloudlet, CPU terpakai c s` | Semua task di VM itu selesai; CPU diukur dari cgroup container |
+| `Semua cloudlet selesai (N/N). Finishing...` | Run selesai, lalu metrik dihitung |
+
+Waktu selesai diukur di dalam container, jadi pencetakan log tidak memengaruhi metrik. Log bisa dimatikan dengan `--quiet`.
+
+Kalau muncul `placement cocok dengan CloudSim`, `Semua cloudlet selesai`, dan baris `makespan=...`, setup sudah benar. Folder `results_demo/` boleh dihapus setelahnya.
 
 #### Langkah 6: Jalankan skenario
 
 Format: `python3 kpb_realworld.py --dataset <file GoCJ> --k <persen> --repeat <N>`
 
 ```bash
-# Demo di kelas: S1, 1 repetisi (±15 detik)
+# S1, 1 repetisi (±15 detik)
 python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_100.txt --k 20 --repeat 1
 
 # S2: 500 task, k = 50%, 3 repetisi (±3 menit)
@@ -498,14 +529,14 @@ python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_50
 python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_1000.txt --k 100
 ```
 
-Seluruh 9 kombinasi × 3 repetisi, sama seperti tabel 7.4 (±30 menit):
+Seluruh 9 kombinasi × 3 repetisi, sama seperti tabel 7.4 (±30 menit). `--quiet` dipakai supaya log tidak berisi ribuan baris per cloudlet:
 
 ```bash
 rm -rf results && mkdir results    # opsional: summary.csv dan aggregate.csv bersifat append
 
 for n in 100 500 1000; do for k in 20 50 100; do
   echo "== GoCJ $n task, k = $k% =="
-  python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_$n.txt --k $k --repeat 3 \
+  python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_$n.txt --k $k --repeat 3 --quiet \
     | tee results/log_GoCJ_Dataset_${n}_k$k.txt
 done; done
 ```
@@ -536,7 +567,27 @@ column -s, -t results/summary.csv | less -S      # satu baris per run
 | `results/tasks_<dataset>_n<N>_k<K>_run<R>.csv` | Per task: VM, tipe, DC, host, waktu selesai |
 | `results/log_<dataset>_k<K>.txt` | Salinan output terminal (bila memakai loop di atas) |
 
-#### Langkah 8: Matikan container
+#### Langkah 8: Bandingkan mapping dengan simulasi
+
+`kpb_schedule()` di Python memakai logika yang sama dengan `KpbScheduler.java`. Untuk membuktikannya, bandingkan mapping Python dengan VM tempat setiap cloudlet berjalan di CloudSim (`results/simulation/cloudlets_<dataset>_k<K>.csv`, hasil bagian 8):
+
+```bash
+for k in 20 50 100; do python3 -c "
+import csv, kpb_realworld as r
+L = r.load_gocj('../src/main/resources/dataset/GoCJ_Dataset_100.txt')
+py = r.kpb_schedule(L, [v['capacity'] for v in r.VMS], $k)
+java = [int(row['vm']) for row in csv.DictReader(open('../results/simulation/cloudlets_GoCJ_Dataset_100_k$k.csv'))]
+print('k=$k%:', 'IDENTIK' if py == java else 'BEDA', '-', sum(a == b for a, b in zip(py, java)), '/', len(java), 'task sama')
+"; done
+```
+
+```text
+k=20%: IDENTIK - 100 / 100 task sama
+k=50%: IDENTIK - 100 / 100 task sama
+k=100%: IDENTIK - 100 / 100 task sama
+```
+
+#### Langkah 9: Matikan container
 
 ```bash
 docker compose down
@@ -547,6 +598,7 @@ docker compose down
 | Masalah | Penyebab / solusi |
 |:---|:---|
 | `[ERROR] vm00 (http://127.0.0.1:9100) tidak merespons` | Container belum jalan. Lakukan langkah 3–4, tunggu beberapa detik, lalu ulangi |
+| `[ERROR] vm00 masih memakai worker versi lama (tanpa log real-time)` | Container belum memuat `worker.py` terbaru. Jalankan `docker compose restart` |
 | `[ERROR] vm00 punya None PE, seharusnya 4` | Container masih versi lama. Jalankan `docker compose up -d --force-recreate` |
 | `[ERROR] Penempatan vmXX beda dengan CloudSim` | Konfigurasi simulasi berubah. Samakan `PLACEMENT` di `kpb_realworld.py` dengan `results/simulation/placement.csv` |
 | `Cannot connect to the Docker daemon` | Docker belum dinyalakan (lihat langkah 1) |
@@ -564,8 +616,9 @@ docker compose down
 | `--limit` | 0 (semua) | Hanya pakai N task pertama |
 | `--out` | `results` | Folder output CSV |
 | `--placement` | `../results/simulation/placement.csv` | File penempatan CloudSim untuk verifikasi |
+| `--quiet` | mati | Sembunyikan log broker real-time per cloudlet |
 
-Contoh output (S2, k = 50%):
+Contoh output dengan `--quiet` (S2, k = 50%):
 
 ```text
 scheduler=KPB(k=50.0%) realworld, placement cocok dengan CloudSim
@@ -746,6 +799,17 @@ vmFinish=[360.21, 240.21, 180.21, 120.21, 0.0, ...]
 | `mapping[i]` | VM tujuan task ke-i (lihat tabel 3.3) |
 | `vmFinish[j]` | Waktu selesai task terakhir di VM ke-j; 0 berarti VM tidak dipakai |
 
+Tabel `Infrastruktur CloudSim` dibaca langsung dari objek CloudSim setelah run, sehingga bisa dibandingkan baris demi baris dengan tabel desain di bagian 3.1–3.3. Mapping pada contoh 5 task sama dengan hitungan manual di bagian 2.4, dan perilaku `vmFinish` (VM mana yang terpakai) sama dengan tabel di bagian 2.5.
+
+Program memvalidasi dirinya sendiri setiap run ([`SimulationSetup.validate()`](src/main/java/project/setup/SimulationSetup.java)). Kalau ada bagian yang salah, program berhenti sebelum mencetak metrik, dengan salah satu pesan berikut:
+
+| Pesan error | Artinya |
+|:---|:---|
+| `Only X of 20 VMs were created` | Ada VM yang gagal ditempatkan di host |
+| `Cloudlet i could not be bound to VM j` | Binding KPB → cloudlet gagal |
+| `Cloudlet i ran on a different VM than scheduled` | CloudSim menjalankan task di VM lain, bukan VM pilihan KPB |
+| `Only X of N cloudlets finished` | Ada task yang tidak selesai |
+
 ### Langkah 4: File hasil
 
 | File | Isi |
@@ -765,191 +829,7 @@ done
 
 ---
 
-## 9. Checklist Demo: Cek KPB Berhasil
-
-Urutan pengecekan untuk demo (±10 menit). Setiap cek berisi perintah yang dijalankan, bagian output yang diperhatikan, dan kriteria lulus. Semua nilai "yang harus muncul" di bawah adalah hasil run nyata, dan simulasinya deterministik, jadi angkanya harus sama persis.
-
-| No. | Yang dibuktikan | Kriteria lulus |
-|:---:|:---|:---|
-| 1 | Infrastruktur CloudSim sesuai desain | 2 DC, 6 host, 20 VM, `vmsCreated=20/20`, tidak ada host melebihi 8 PE |
-| 2 | KPB memetakan task sesuai hitungan manual | `mapping=[0, 1, 2, 3, 3]`, sama dengan tabel 2.4 |
-| 3 | Mapping KPB benar-benar dijalankan CloudSim | Log `Sending Cloudlet i to Vm j` sesuai mapping, `cloudletsFinished=N/N` |
-| 4 | Parameter k bekerja sesuai teori | k = 20% → 4 VM, k = 50% → 10 VM, k = 100% → 20 VM |
-| 5 | Real world berjalan dengan infrastruktur yang sama | `placement cocok dengan CloudSim`, `vmsUsed=4/20` untuk k = 20% |
-| 6 | KPB versi real world identik dengan versi CloudSim | `IDENTIK - 100 / 100 task sama` untuk k = 20, 50, 100 |
-
-### Persiapan
-
-```bash
-cd ~/soka-a-5                 # semua perintah mvn dijalankan dari folder ini
-mvn -q clean compile          # tidak ada output = build sukses
-
-cd realworld && docker compose up -d && cd ..    # hanya untuk cek 5–6
-```
-
-### Cek 1: Infrastruktur sesuai desain
-
-```bash
-mvn -q exec:java
-```
-
-Perhatikan dua bagian output:
-
-**a. Log CloudSim (di atas).** VM dibuat dan ditempatkan di host:
-
-```text
-INFO  0.00: DatacenterSimple1 is starting...
-INFO  0.00: DatacenterSimple2 is starting...
-INFO  0.00: VmAllocationPolicySimple: Vm 0 (V3) has been allocated to Host 0/DC 1
-...
-INFO  0.00: VmAllocationPolicySimple: Vm 8 (V2) has been allocated to Host 0/DC 2
-...
-INFO  0.00: VmAllocationPolicySimple: Vm 19 (V1) has been allocated to Host 0/DC 2
-```
-
-**b. Tabel `=== Infrastruktur CloudSim ===` (di bawah).** Bandingkan baris demi baris dengan tabel 3.1–3.3:
-
-| Cek | Harus muncul |
-|:---|:---|
-| DC-1 | `DC-1 Performance \| x86 / Linux / Xen \| 3 host \| $0.05/s, $0.02/GB RAM, ...` |
-| DC-2 | `DC-2 Efficiency \| x86 / Linux / Xen \| 3 host \| $0.03/s, $0.01/GB RAM, ...` |
-| Host Tipe A | `8 PE x 3000 MIPS \| RAM 32 GB \| BW 10000 Mbps \| P idle 175 W, P max 250 W` |
-| Host Tipe B | `8 PE x 1800 MIPS \| RAM 32 GB \| BW 5000 Mbps \| P idle 72 W, P max 120 W` |
-| VM V3 / V2 / V1 | `4 PE x 2500 MIPS \| RAM 8 GB` · `2 PE x 1500 MIPS \| RAM 4 GB` · `1 PE x 1000 MIPS \| RAM 2 GB` |
-| Batasan C3 | `PE terpakai` DC-1 = 8/8, 8/8, 8/8; DC-2 = 6/8, 5/8, 5/8 (tidak ada yang lebih dari 8) |
-| Batasan C6 | Keempat VM V3 (vm0–vm3) hanya ada di DC-1, karena 2.500 MIPS/PE > 1.800 MIPS/PE host Tipe B |
-| Total | `Total: 2 datacenter, 6 host, 20 VM` dan `vmsCreated=20/20` |
-
-Kode yang membuat infrastruktur ini: [`DatacenterFactory.java`](src/main/java/project/setup/DatacenterFactory.java) (DC dan host), [`VmFactory.java`](src/main/java/project/setup/VmFactory.java) (VM), dan [`ConstrainedPlacement.java`](src/main/java/project/setup/ConstrainedPlacement.java) (aturan VM → host).
-
-### Cek 2: KPB memetakan task sesuai hitungan manual
-
-Masih dari output `mvn -q exec:java` (5 task contoh, k = 20%):
-
-```text
-scheduler=KPB(k=20.0%)
-makespan=360.210 s (analitik 90.000 s), ...
-mapping=[0, 1, 2, 3, 3]
-```
-
-Bandingkan dengan perhitungan manual di **tabel 2.4**:
-
-- Subset k = 20% berisi 4 VM tercepat, yaitu VM 0–3 (V3).
-- Task 0–3 masing-masing mendapat VM V3 yang masih kosong (`ready = 0`).
-- Task 4 (150.000 MI) masuk ke **VM 3**, karena CT di VM 3 = 30 + 15 = **45**, yang terkecil dibanding 105, 75, dan 60.
-- Makespan analitik = 90 s, yaitu task 0 (900.000 MI) di VM 0.
-
-✅ Lulus bila `mapping=[0, 1, 2, 3, 3]` dan `analitik 90.000 s`.
-
-### Cek 3: Mapping KPB benar-benar dijalankan CloudSim
-
-Masih dari output yang sama, lihat log broker:
-
-```text
-INFO  0.10: DatacenterBrokerSimple3: Sending Cloudlet 0 to Vm 0 (V3) in Host 0/DC 1.
-INFO  0.10: DatacenterBrokerSimple3: Sending Cloudlet 1 to Vm 1 (V3) in Host 1/DC 1.
-INFO  0.10: DatacenterBrokerSimple3: Sending Cloudlet 2 to Vm 2 (V3) in Host 2/DC 1.
-INFO  0.10: DatacenterBrokerSimple3: Sending Cloudlet 3 to Vm 3 (V3) in Host 0/DC 1.
-INFO  0.10: DatacenterBrokerSimple3: Sending Cloudlet 4 to Vm 3 (V3) in Host 0/DC 1.
-INFO  60.11: DatacenterBrokerSimple3: Cloudlet 4 finished in Vm 3 (V3) and returned to broker.
-...
-INFO  360.21: DatacenterBrokerSimple3: Cloudlet 0 finished in Vm 0 (V3) and returned to broker.
-```
-
-- Cloudlet `i` dikirim ke `Vm mapping[i]`, sesuai dengan `mapping=[0, 1, 2, 3, 3]`.
-- `tasks=5, vmsCreated=20/20, cloudletsFinished=5/5`.
-
-Selain itu, program memvalidasi sendiri di setiap run ([`SimulationSetup.validate()`](src/main/java/project/setup/SimulationSetup.java)). Bila ada yang salah, program **berhenti dengan error** dan tidak mencetak metrik:
-
-| Pesan error | Artinya |
-|:---|:---|
-| `Only X of 20 VMs were created` | Ada VM yang gagal ditempatkan di host |
-| `Cloudlet i could not be bound to VM j` | Binding KPB → cloudlet gagal |
-| `Cloudlet i ran on a different VM than scheduled` | CloudSim menjalankan task di VM lain, bukan VM pilihan KPB |
-| `Only X of N cloudlets finished` | Ada task yang tidak selesai |
-
-✅ Lulus bila output sampai ke baris `mapping=` tanpa error.
-
-### Cek 4: Parameter k bekerja sesuai teori
-
-Jalankan S1 (100 task) dengan tiga nilai k. `-Dlog=error` menyembunyikan log CloudSim supaya ringkasannya mudah dibaca:
-
-```bash
-mvn -q exec:java -Dlog=error -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_100.txt 20"  | grep -E "makespan|vmFinish"
-mvn -q exec:java -Dlog=error -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_100.txt 50"  | grep -E "makespan|vmFinish"
-mvn -q exec:java -Dlog=error -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_100.txt 100" | grep -E "makespan|vmFinish"
-```
-
-Lihat `vmFinish`: VM dengan nilai **0.0** tidak mendapat task sama sekali.
-
-| k | Subset `s` | VM terpakai (`vmFinish` ≠ 0) | Makespan | Energi |
-|:---:|:---:|:---|---:|---:|
-| 20% | 4 | Hanya VM 0–3 (V3), 16 VM lain 0.0 | 1.327,252 s | 0,3025 kWh |
-| 50% | 10 | VM 0–9 (V3 + 6 V2), VM 10–19 0.0 | 515,162 s | 0,1224 kWh |
-| 100% | 20 | Semua VM 0–19 (setara MCT) | 483,760 s | 0,1130 kWh |
-
-Ini membuktikan perilaku KPB (bagian 2.5): subset hanya berisi `s = ⌈k% × 20⌉` VM tercepat, sehingga makin kecil k makin sedikit VM yang dipakai. Pada k = 100%, KPB sama dengan MCT.
-
-✅ Lulus bila jumlah VM terpakai 4 / 10 / 20 dan makespan sesuai tabel.
-
-> Setiap run dengan dataset menambah satu baris ke `results/simulation/summary.csv` dan menimpa `cloudlets_GoCJ_Dataset_100_k<K>.csv` dengan isi yang sama (deterministik).
-
-### Cek 5: Real world berjalan dengan infrastruktur yang sama
-
-```bash
-cd realworld
-docker ps --filter name=kpb_vm --format '{{.Names}}  {{.Status}}'    # harus 20 baris "Up"
-python3 kpb_realworld.py --limit 20 --repeat 1 --k 20 --out results_demo
-```
-
-Yang harus muncul (±15 detik; angka waktu bisa sedikit berbeda tiap run):
-
-```text
-scheduler=KPB(k=20.0%) realworld, placement cocok dengan CloudSim
-  makespan=6.794s, ..., vmsUsed=4/20
-```
-
-- `placement cocok dengan CloudSim`: 20 container ditempatkan di DC/host yang sama dengan `results/simulation/placement.csv`.
-- `vmsUsed=4/20`: sama seperti di simulasi, k = 20% hanya memakai 4 VM V3.
-- Detail per task ada di `results_demo/tasks_GoCJ_Dataset_100_n20_k20_run1.csv` (kolom `vm`, `vm_type`, `datacenter`, `host`).
-
-Pembanding: dengan `--k 100`, jumlah VM terpakai naik (`vmsUsed=12/20` untuk 20 task).
-
-✅ Lulus bila muncul `placement cocok dengan CloudSim` dan `vmsUsed=4/20`.
-
-### Cek 6: KPB real world identik dengan KPB CloudSim
-
-Perintah ini membandingkan mapping dari `kpb_schedule()` (Python) dengan VM tempat setiap cloudlet berjalan di CloudSim (`cloudlets_*.csv` hasil cek 4). Jalankan dari folder `realworld/`:
-
-```bash
-for k in 20 50 100; do python3 -c "
-import csv, kpb_realworld as r
-L = r.load_gocj('../src/main/resources/dataset/GoCJ_Dataset_100.txt')
-py = r.kpb_schedule(L, [v['capacity'] for v in r.VMS], $k)
-java = [int(row['vm']) for row in csv.DictReader(open('../results/simulation/cloudlets_GoCJ_Dataset_100_k$k.csv'))]
-print('k=$k%:', 'IDENTIK' if py == java else 'BEDA', '-', sum(a == b for a, b in zip(py, java)), '/', len(java), 'task sama')
-"; done
-```
-
-Yang harus muncul:
-
-```text
-k=20%: IDENTIK - 100 / 100 task sama
-k=50%: IDENTIK - 100 / 100 task sama
-k=100%: IDENTIK - 100 / 100 task sama
-```
-
-✅ Lulus bila ketiganya `IDENTIK`. Artinya algoritma yang dijalankan di Docker sama persis dengan yang dijalankan di CloudSim.
-
-### Selesai
-
-```bash
-docker compose down     # dari folder realworld/
-```
-
----
-
-## 10. Struktur Direktori
+## 9. Struktur Direktori
 
 ```
 soka-a-5/
@@ -1005,7 +885,7 @@ soka-a-5/
 
 ---
 
-## 11. Status dan Batasan
+## 10. Status dan Batasan
 
 | Tugas | Status |
 |:---|:---|
@@ -1022,7 +902,7 @@ Penyimpangan dari Draft Desain dan alasannya (analisis lengkap, termasuk bagian 
 |:---|:---|:---|
 | Algoritma usulan metaheuristik + RR, Min-Min, PSO | KPB saja | Tugas minggu ini satu algoritma heuristik |
 | Weighted sum (w1, w2) dan Wilcoxon | Tidak dipakai | Hanya relevan untuk membandingkan beberapa algoritma / fungsi fitness |
-| 10 run per konfigurasi | Simulasi 1× (deterministik), real world 3× | Simulasi selalu identik; 10× real world terlalu lama untuk demo |
+| 10 run per konfigurasi | Simulasi 1× (deterministik), real world 3× | Simulasi selalu identik; 10× real world terlalu lama untuk dijalankan di kelas |
 | Java 17 | Java 11 | JDK yang terpasang; kode kompatibel dengan Java 17 |
 | `VmAllocationPolicySimple` | Simple + filter batasan C3–C6 | Bawaan CloudSim melanggar C3 (lihat 4.4) |
 
@@ -1030,7 +910,7 @@ Asumsi yang tetap berlaku (Desain bagian 4.5): tanpa migrasi VM, tanpa kegagalan
 
 ---
 
-## 12. Referensi
+## 11. Referensi
 
 1. Maheswaran M, Ali S, Siegel HJ, Hensgen D, Freund RF. Dynamic matching and scheduling of a class of independent tasks onto heterogeneous computing systems. *Proc. 8th Heterogeneous Computing Workshop (HCW '99)*. 1999:30–44.
 2. Braun TD, et al. A comparison of eleven static heuristics for mapping a class of independent tasks onto heterogeneous distributed computing systems. *Journal of Parallel and Distributed Computing*. 2001;61(6):810–837.

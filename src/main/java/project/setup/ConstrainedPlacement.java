@@ -28,6 +28,8 @@ public final class ConstrainedPlacement {
 				.min(Comparator.comparingLong(ConstrainedPlacement::usedPes));
 	}
 
+	// ★ TUNJUK: C6 di baris "vm.getMips() <= host.getMips()" - inilah yang menolak V3 (2.500 MIPS/PE)
+	// di host Tipe B (1.800 MIPS/PE), sehingga keempat V3 wajib berakhir di DC-1.
 	static boolean fits(Host host, Vm vm) {
 		return usedPes(host) + vm.getNumberOfPes() <= host.getNumberOfPes()   // C3
 				&& vm.getMips() <= host.getMips()                             // C6
@@ -46,6 +48,8 @@ public final class ConstrainedPlacement {
 	 * dispatches the cloudlets bound to such a VM. Sending every VM straight to
 	 * its planned datacenter avoids the retry.
 	 */
+	// ★ TUNJUK: hasil akhir fungsi ini yang membuat DC-1 penuh 24/24 PE (4 V3 + 4 V2)
+	// dan DC-2 terisi 16/24 PE (4 V2 + 8 V1), sesuai desain bagian 3.
 	public static Map<Vm, Datacenter> planDatacenters(List<Datacenter> datacenters, List<Vm> vms) {
 		// Identity map: host IDs repeat across datacenters, so equals() would merge them.
 		Map<Host, long[]> used = new IdentityHashMap<>(); // {PEs, RAM, BW}

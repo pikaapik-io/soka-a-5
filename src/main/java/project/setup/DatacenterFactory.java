@@ -21,7 +21,9 @@ public final class DatacenterFactory {
 
 	/** Host type: PE count, MIPS per PE, RAM (MB), BW (Mbps), storage (MB), power (W). */
 	public enum HostType {
+		// ★ TUNJUK: Host Tipe A (DC-1 Performance), 8 PE x 3.000 MIPS, 32 GB RAM, 10 Gbps, P idle 175 W / P max 250 W.
 		A_PERFORMANCE(8, 3_000, 32_768, 10_000, 1_000_000, 250, 175),
+		// ★ TUNJUK: Host Tipe B (DC-2 Efficiency), 8 PE x 1.800 MIPS, 32 GB RAM, 5 Gbps, P idle 72 W / P max 120 W.
 		B_EFFICIENCY(8, 1_800, 32_768, 5_000, 1_000_000, 120, 72);
 
 		public final int pes;
@@ -49,11 +51,13 @@ public final class DatacenterFactory {
 	/** Scheduling interval  */
 	public static final double SCHEDULING_INTERVAL = 1.0;
 
+	// ★ TUNJUK: 3 host per DC -> total 2 DC x 3 host = 6 host (48 PE, 192 GB RAM di seluruh sistem).
 	private static final int HOSTS_PER_DATACENTER = 3;
 	private static final double MB_PER_GB = 1024.0;
 
 	private DatacenterFactory() { }
 
+	// ★ TUNJUK: di sinilah 2 datacenter dibuat - DC-1 Performance (host Tipe A) dan DC-2 Efficiency (host Tipe B).
 	/** @return [DC-1 Performance, DC-2 Efficiency] */
 	public static List<Datacenter> createAll(CloudSim simulation) {
 		List<Datacenter> datacenters = new ArrayList<>();
