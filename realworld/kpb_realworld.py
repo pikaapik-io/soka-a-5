@@ -13,6 +13,7 @@ Logika KPB sama dengan src/main/java/project/scheduler/KpbScheduler.java.
 
 Contoh:
   python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_100.txt --k 20 --repeat 3
+  python3 kpb_realworld.py ... --quiet     (tanpa log broker per cloudlet)
 """
 
 import argparse
@@ -101,11 +102,19 @@ def kpb_schedule(lengths, capacities, k_percent):
 
 # ── Komunikasi dengan worker ──────────────────────────────────────────────────
 
-def post(url, payload, timeout=7200):
+def post_stream(url, payload, timeout=7200):
+    """POST lalu baca balasan NDJSON worker baris per baris, begitu barisnya dikirim."""
     req = urllib.request.Request(url, data=json.dumps(payload).encode(),
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read())
+        for line in resp:
+            if line.strip():
+                yield json.loads(line)
+
+
+def where(vm):
+    """Contoh: vm00 (V3) di DC-1/Host A0."""
+    return f"{vm['name']} ({vm['type']}) di DC-{vm['dc']}/Host {DATACENTERS[vm['dc']]['host_type']}{vm['host']}"
 
 
 def check_workers():
@@ -116,6 +125,9 @@ def check_workers():
         except OSError as exc:
             raise SystemExit(f"[ERROR] {vm['name']} ({vm['url']}) tidak merespons: {exc}\n"
                              "        Jalankan dulu: docker compose up -d")
+        if not health.get("stream"):
+            raise SystemExit(f"[ERROR] {vm['name']} masih memakai worker versi lama (tanpa log real-time).\n"
+                             "        Jalankan ulang: docker compose restart")
         if health.get("pes") != vm["pes"]:
             raise SystemExit(f"[ERROR] {vm['name']} punya {health.get('pes')} PE, seharusnya {vm['pes']}.\n"
                              "        Jalankan ulang: docker compose up -d --force-recreate")
@@ -137,26 +149,56 @@ def check_placement(path):
 def calibrate(iterations=2_000_000):
     """Iterasi per detik setara 1,0 CPU, diukur pada 1 PE V3 (0,25 CPU)."""
     t0 = time.monotonic()
-    reply = post(VMS[0]["url"] + "/batch", {"tasks": [{"id": 0, "iterations": iterations}]})
-    elapsed = reply["finish"]["0"] - t0
+    elapsed = None
+    for event in post_stream(VMS[0]["url"] + "/batch", {"tasks": [{"id": 0, "iterations": iterations}]}):
+        if "id" in event:
+            elapsed = event["finish"] - t0
     return iterations / elapsed * (REF_MIPS / VMS[0]["mips"])
 
 
 # ── Eksekusi satu run ─────────────────────────────────────────────────────────
 
-def execute(lengths, mapping, iters_per_mi):
+def execute(lengths, mapping, iters_per_mi, live=True):
+    """Kirim satu batch per VM, lalu tampilkan setiap cloudlet yang selesai secara real-time.
+
+    Waktu di log = detik sejak batch dikirim (t0). Waktu selesai diukur di dalam
+    container, jadi pencetakan log tidak memengaruhi metrik.
+    """
     batches = {j: [] for j in range(len(VMS))}
     for task, vm in enumerate(mapping):
         batches[vm].append({"id": task, "iterations": int(lengths[task] * iters_per_mi)})
 
-    replies, errors = {}, []
+    total = len(mapping)
+    finish = {}  # task -> (indeks VM, detik sejak t0)
+    cpu_s = [0.0] * len(VMS)
+    errors = []
+    lock = threading.Lock()
+
+    def log(t, message):
+        if live:
+            print(f"{t:9.2f}: Broker: {message}", flush=True)
+
+    for task, vm in enumerate(mapping):
+        log(0.0, f"Mengirim Cloudlet #{task} ({int(lengths[task])} MI) ke {where(VMS[vm])}")
     t0 = time.monotonic()
 
     def run_vm(j):
+        vm = VMS[j]
         try:
-            replies[j] = post(VMS[j]["url"] + "/batch", {"tasks": batches[j]})
+            for event in post_stream(vm["url"] + "/batch", {"tasks": batches[j]}):
+                with lock:
+                    if "id" in event:
+                        task, t = int(event["id"]), event["finish"] - t0
+                        finish[task] = (j, t)
+                        log(t, f"Cloudlet #{task} selesai di {where(vm)}, diterima broker")
+                        log(t, f"Jumlah cloudlet selesai: {len(finish)}/{total}")
+                    else:
+                        cpu_s[j] = event["cpu_s"]
+                        log(time.monotonic() - t0, f"{vm['name']} ({vm['type']}) selesai: "
+                            f"{len(batches[j])} cloudlet, CPU terpakai {cpu_s[j]:.2f} s")
         except Exception as exc:  # noqa: BLE001 - dilaporkan setelah join
-            errors.append(f"{VMS[j]['name']}: {exc}")
+            with lock:
+                errors.append(f"{vm['name']}: {exc}")
 
     threads = [threading.Thread(target=run_vm, args=(j,)) for j in batches if batches[j]]
     for t in threads:
@@ -165,19 +207,18 @@ def execute(lengths, mapping, iters_per_mi):
         t.join()
     if errors:
         raise SystemExit("[ERROR] " + "; ".join(errors))
+    if len(finish) != total:
+        raise SystemExit(f"[ERROR] Hanya {len(finish)} dari {total} cloudlet yang selesai")
+    log(max(t for _, t in finish.values()), f"Semua cloudlet selesai ({total}/{total}). Finishing...")
 
     records = []
-    cpu_s = [0.0] * len(VMS)
-    for j, reply in replies.items():
-        cpu_s[j] = reply["cpu_s"]
-        for task_id, finish in reply["finish"].items():
-            task = int(task_id)
-            records.append({
-                "task_id": task, "length_mi": int(lengths[task]),
-                "vm": VMS[j]["name"], "vm_type": VMS[j]["type"],
-                "datacenter": VMS[j]["dc"], "host": VMS[j]["host"],
-                "finish_s": round(finish - t0, 4),
-            })
+    for task, (j, t) in finish.items():
+        records.append({
+            "task_id": task, "length_mi": int(lengths[task]),
+            "vm": VMS[j]["name"], "vm_type": VMS[j]["type"],
+            "datacenter": VMS[j]["dc"], "host": VMS[j]["host"],
+            "finish_s": round(t, 4),
+        })
     return sorted(records, key=lambda r: r["task_id"]), cpu_s
 
 
@@ -266,6 +307,7 @@ def main():
     parser.add_argument("--limit", type=int, default=0, help="hanya pakai N task pertama")
     parser.add_argument("--out", default="results")
     parser.add_argument("--placement", default="../results/simulation/placement.csv")
+    parser.add_argument("--quiet", action="store_true", help="sembunyikan log broker per cloudlet")
     args = parser.parse_args()
     if not 0 < args.k <= 100:
         raise SystemExit("--k harus di rentang (0, 100]")
@@ -298,7 +340,7 @@ def main():
 
         print(f"[run {run}/{args.repeat}] menjalankan task di container... "
               f"(prediksi analitik ±{predicted:.1f} s)", flush=True)
-        records, cpu_s = execute(lengths, mapping, args.iters_per_mi)
+        records, cpu_s = execute(lengths, mapping, args.iters_per_mi, live=not args.quiet)
         m = compute_metrics(records, cpu_s)
         m["scheduling_ms"] = sched_ms
         runs.append(m)

@@ -10,9 +10,11 @@ Meniru CloudletSchedulerTimeShared dari CloudSim:
     container tetap dibatasi kernel lewat cpu_quota di docker-compose.yml.
 
 Endpoint:
-  GET  /health -> {"vm": ..., "pes": ..., "status": "ok"}
-  POST /batch  {"t0": monotonic, "tasks": [{"id": i, "iterations": n}, ...]}
-               -> {"finish": {id: monotonic}, "cpu_s": detik CPU cgroup}
+  GET  /health -> {"vm": ..., "pes": ..., "stream": true, "status": "ok"}
+  POST /batch  {"tasks": [{"id": i, "iterations": n}, ...]}
+               -> streaming NDJSON, satu baris per task begitu task selesai:
+                  {"id": i, "finish": monotonic}
+                  lalu baris terakhir {"vm": ..., "cpu_s": detik CPU cgroup}
 """
 
 import json
@@ -89,13 +91,11 @@ def start_pes():
 
 
 def run_batch(tasks):
+    """Masukkan semua task ke antrean PE, lalu yield (id, waktu selesai) satu per satu."""
     for task in tasks:
         WORK_Q.put((task["id"], max(1, int(task["iterations"]))))
-    finish = {}
-    while len(finish) < len(tasks):
-        task_id, t = DONE_Q.get()
-        finish[task_id] = t
-    return finish
+    for _ in tasks:
+        yield DONE_Q.get()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -109,7 +109,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            self._reply({"vm": VM_NAME, "pes": PES, "pe_share": PE_SHARE, "status": "ok"})
+            self._reply({"vm": VM_NAME, "pes": PES, "pe_share": PE_SHARE, "stream": True, "status": "ok"})
         else:
             self._reply({"error": "not found"}, 404)
 
@@ -119,13 +119,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         length = int(self.headers.get("Content-Length", "0"))
         request = json.loads(self.rfile.read(length) or b"{}")
+        # HTTP/1.0 tanpa Content-Length: setiap baris langsung terkirim ke runner,
+        # sehingga runner bisa menampilkan cloudlet yang selesai secara real-time.
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-ndjson")
+        self.end_headers()
         cpu_before = cgroup_cpu_seconds()
-        finish = run_batch(request.get("tasks", []))
-        self._reply({
-            "vm": VM_NAME,
-            "finish": finish,
-            "cpu_s": cgroup_cpu_seconds() - cpu_before,
-        })
+        for task_id, t in run_batch(request.get("tasks", [])):
+            self._send_line({"id": task_id, "finish": t})
+        self._send_line({"vm": VM_NAME, "cpu_s": cgroup_cpu_seconds() - cpu_before})
+
+    def _send_line(self, payload):
+        self.wfile.write((json.dumps(payload) + "\n").encode())
+        self.wfile.flush()
 
     def log_message(self, *args):
         pass

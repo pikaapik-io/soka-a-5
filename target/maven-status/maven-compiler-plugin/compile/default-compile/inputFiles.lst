@@ -2,6 +2,7 @@
 /home/exileerr/soka-a-5/src/main/java/project/setup/SimulationSetup.java
 /home/exileerr/soka-a-5/src/main/java/project/model/FitnessEvaluator.java
 /home/exileerr/soka-a-5/src/main/java/project/metrics/MetricsCollector.java
+/home/exileerr/soka-a-5/src/main/java/project/setup/ConstrainedPlacement.java
 /home/exileerr/soka-a-5/src/main/java/project/Experiment.java
 /home/exileerr/soka-a-5/src/main/java/project/setup/VmFactory.java
 /home/exileerr/soka-a-5/src/main/java/project/data/GoCJLoader.java

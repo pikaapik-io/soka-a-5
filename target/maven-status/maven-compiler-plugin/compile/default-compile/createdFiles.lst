@@ -1,6 +1,8 @@
+project/setup/ConstrainedPlacement.class
 project/model/EtcMatrix.class
 project/scheduler/Scheduler.class
 project/data/GoCJLoader.class
+project/setup/DatacenterFactory$HostType.class
 project/metrics/EnergyMeter.class
 project/scheduler/KpbScheduler.class
 project/metrics/Result.class
@@ -10,4 +12,5 @@ project/setup/VmFactory.class
 project/setup/CloudSimAdapter.class
 project/model/FitnessEvaluator.class
 project/setup/SimulationSetup.class
+project/setup/VmFactory$VmType.class
 project/metrics/MetricsCollector.class

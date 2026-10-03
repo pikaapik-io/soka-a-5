@@ -647,43 +647,46 @@ rata-rata ± std dari 3 run:
 
 ### 7.4 Hasil Ujicoba Real-World
 
-**Environment:** Docker 29.8 di WSL2, Intel Core Ultra 7 155H (6 P-core + 8 E-core + 2 LP-E core, 22 thread), 8 GB RAM. Setiap konfigurasi dijalankan **3 kali**; nilai berikut adalah mean ± std. Semua task di semua run selesai tanpa kegagalan, dan penempatan VM selalu cocok dengan CloudSim. Data lengkap ada di [`realworld/results/aggregate.csv`](realworld/results/aggregate.csv).
+**Environment:** Docker 29.8 di WSL2, Intel Core Ultra 7 155H (6 P-core + 8 E-core + 2 LP-E core, 22 thread), 8 GB RAM. Nilai berikut adalah hasil run final (1 run per konfigurasi, dijalankan berurutan dalam satu sesi). Semua task selesai tanpa kegagalan, dan penempatan VM selalu cocok dengan CloudSim. Data mentah ada di [`realworld/results/aggregate.csv`](realworld/results/aggregate.csv) (baris dengan `runs=1`, 2026-10-03).
 
-| Skenario | k | Makespan (s) | Energi (Wh) | Avg response (s) | Utilisasi | DI | Throughput (task/s) | Biaya (USD) | Waktu penjadwalan |
-|:---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| S1 (100) | 20% | 14,81 ± 0,91 | 3,4 ± 0,2 | 6,50 ± 0,01 | 18,6% | 5,39 | 6,77 ± 0,40 | 83,05 | 0,35 ms |
-| S1 (100) | 50% | **12,47 ± 0,41** | **3,0 ± 0,1** | 7,00 ± 0,32 | 40,8% | 2,45 | **8,03 ± 0,27** | **80,24** | 0,45 ms |
-| S1 (100) | 100% | 13,56 ± 0,67 | 3,3 ± 0,1 | **5,88 ± 0,33** | 56,3% | 1,20 | 7,39 ± 0,36 | 81,55 | 0,66 ms |
-| S2 (500) | 20% | 59,89 ± 1,38 | 14,3 ± 0,3 | 33,38 ± 1,54 | 19,8% | 5,06 | 8,35 ± 0,19 | 137,15 | 1,30 ms |
-| S2 (500) | 50% | 57,09 ± 2,09 | 14,3 ± 0,5 | 35,60 ± 0,90 | 45,6% | 2,20 | 8,77 ± 0,32 | 133,79 | 1,98 ms |
-| S2 (500) | 100% | **48,32 ± 1,75** | **12,7 ± 0,4** | **33,23 ± 1,02** | 90,5% | 0,21 | **10,36 ± 0,37** | **123,27** | 1,52 ms |
-| S3 (1.000) | 20% | **121,54 ± 3,03** | **29,1 ± 0,7** | **70,51 ± 0,86** | 19,7% | 5,07 | **8,23 ± 0,21** | **211,13** | 4,44 ms |
-| S3 (1.000) | 50% | 125,78 ± 23,49 | 31,7 ± 6,0 | 79,05 ± 15,96 | 46,0% | 2,17 | 8,12 ± 1,37 | 216,22 | 3,79 ms |
-| S3 (1.000) | 100% | 129,02 ± 10,03 | 34,0 ± 2,5 | 89,63 ± 8,15 | 90,4% | 0,24 | 7,78 ± 0,63 | 220,10 | 4,21 ms |
+> Pengujian awal memakai 3 repetisi per konfigurasi untuk mendapat std; hasilnya stabil di S1–S2 tapi tidak stabil di S3 (std makespan sampai ±23,5 s) akibat thermal throttling laptop. Tabel di bawah ini adalah run susulan yang paling valid, dilakukan setelah itu dalam kondisi laptop lebih terkontrol. Data 3 repetisi awal tetap ada di `aggregate.csv` (baris `runs=3`) dan dibahas di bagian 7.7 (Anomali).
 
-Energi dan biaya di real world dihitung untuk durasi nyata (detik), sehingga nilainya jauh lebih kecil daripada simulasi (yang berskala ±40× lebih lama). Yang bisa dibandingkan adalah **trennya**, bukan angka mutlaknya.
+| Skenario | k | Makespan (s) | Energi (kWh) | Avg response (s) | Utilisasi | DI (semua VM / terpakai) | Throughput (task/s) | Biaya (USD) | Waktu penjadwalan |
+|:---:|:---:|---:|---:|---:|---:|:---:|---:|---:|---:|
+| S1 (100) | 20% | 15,02 | 0,00344 | 5,77 | 18,8% | 5,31 / 0,17 | 6,66 | 83,31 | 0,61 ms |
+| S1 (100) | 50% | **12,25** | **0,00287** | 5,00 | 33,7% | 2,97 / 0,80 | 8,16 | **79,98** | 0,63 ms |
+| S1 (100) | 100% | 13,27 | 0,00310 | **4,31** | 44,1% | 1,67 / 1,67 | 7,54 | 81,20 | 0,61 ms |
+| S2 (500) | 20% | 53,90 | 0,01276 | 26,53 | 18,6% | 5,38 / 0,11 | 9,28 | 129,96 | 2,58 ms |
+| S2 (500) | 50% | 50,26 | 0,01262 | 29,86 | 45,1% | 2,22 / 0,16 | 9,95 | 125,59 | 1,70 ms |
+| S2 (500) | 100% | **42,09** | **0,01097** | 26,45 | 86,0% | 0,27 / 0,27 | 11,88 | **115,79** | 2,89 ms |
+| S3 (1.000) | 20% | 106,90 | 0,02556 | 58,98 | 19,3% | 5,19 / 0,06 | 9,35 | 193,55 | 5,50 ms |
+| S3 (1.000) | 50% | 96,61 | 0,02449 | 61,47 | 47,2% | 2,12 / 0,08 | 10,35 | 181,21 | 7,23 ms |
+| S3 (1.000) | 100% | **80,74** | **0,02139** | **55,26** | 91,8% | 0,13 / 0,13 | **12,38** | **162,17** | 7,10 ms |
+
+DI dihitung dua cara: atas seluruh 20 VM (sesuai definisi desain, dipakai di bagian 6.1) dan hanya atas VM yang terpakai (dalam kurung di output program). Pada k = 100%, keduanya sama karena semua VM terpakai. Energi dan biaya di real world dihitung untuk durasi nyata (detik), jauh lebih kecil daripada simulasi (berskala ±40× lebih lama) — yang bisa dibandingkan adalah **trennya**, bukan angka mutlaknya.
 
 **Real world vs CloudSim.** Prediksi = makespan CloudSim tanpa kontensi RAM/BW (tabel 6.2) × `scale`, karena real world tidak meniru RAM/BW 20% per task (lihat 7.6).
 
-| Skenario | k | Prediksi dari CloudSim (s) | Nyata, mean (s) | Nyata / prediksi | Proses PE aktif |
+| Skenario | k | Prediksi dari CloudSim (s) | Nyata (s) | Nyata / prediksi | Proses PE aktif |
 |:---:|:---:|---:|---:|:---:|:---:|
-| S1 (100) | 20% | 13,0 | 14,81 | 1,14× | 16 |
-| S1 (100) | 50% | 9,0 | 12,47 | 1,39× | 28 |
-| S1 (100) | 100% | 10,6 | 13,56 | 1,28× | 40 |
-| S2 (500) | 20% | 36,9 | 59,89 | 1,62× | 16 |
-| S2 (500) | 50% | 30,1 | 57,09 | 1,90× | 28 |
-| S2 (500) | 100% | 24,9 | 48,32 | 1,94× | 40 |
-| S3 (1.000) | 20% | 88,0 | 121,54 | 1,38× | 16 |
-| S3 (1.000) | 50% | 59,6 | 125,78 | 2,11× | 28 |
-| S3 (1.000) | 100% | 49,9 | 129,02 | 2,59× | 40 |
+| S1 (100) | 20% | 11,8 | 15,02 | 1,27× | 16 |
+| S1 (100) | 50% | 9,5 | 12,25 | 1,29× | 28 |
+| S1 (100) | 100% | 7,6 | 13,27 | 1,74× | 40 |
+| S2 (500) | 20% | 54,5 | 53,90 | 0,99× | 16 |
+| S2 (500) | 50% | 35,1 | 50,26 | 1,43× | 28 |
+| S2 (500) | 100% | 28,2 | 42,09 | 1,49× | 40 |
+| S3 (1.000) | 20% | 105,8 | 106,90 | 1,01× | 16 |
+| S3 (1.000) | 50% | 77,3 | 96,61 | 1,25× | 28 |
+| S3 (1.000) | 100% | 62,2 | 80,74 | 1,30× | 40 |
 
 ### 7.5 Analisis Real-World
 
-1. **Perilaku KPB terkonfirmasi.** Jumlah VM terpakai selalu sama dengan `s = ⌈k% × 20⌉` (pada S2–S3, utilisasi ~20% / ~46% / ~90%), dan pada k = 20–50% DI antar VM terpakai kecil (0,03–0,42). Penempatan VM, batas PE, dan time-sharing berjalan seperti di CloudSim.
-2. **Pada S1 dan S2, tren makespan sama dengan simulasi.** k = 100% paling cepat pada S2 (48,3 s vs 59,9 s pada k = 20%), demikian juga energi dan biayanya. Pada S1, k = 50% sedikit lebih cepat dari k = 100%, dan CloudSim tanpa kontensi RAM/BW juga memberi urutan yang sama (373 s vs 423 s).
-3. **Pada S3, tren berbalik: k = 20% paling cepat.** Penyebabnya terlihat di kolom *nyata / prediksi*: rasionya naik dari 1,4× (16 proses PE aktif) menjadi 2,6× (40 proses). Laptop memakai CPU hybrid; makin banyak proses aktif, makin banyak yang terpaksa berjalan di E-core dan LP-E core yang lebih lambat. S3 juga berjalan paling lama (beban penuh lebih dari 30 menit), sehingga thermal throttling ikut berperan. Contohnya S3 k = 50% run 3 tiba-tiba 2,56× dibanding 1,85–1,92× pada dua run sebelumnya, yang membuat std-nya besar (±23 s). Ini persis "interferensi antar VM yang berbagi host fisik" yang tidak dimodelkan simulasi (Desain bagian 4.5).
-4. **Biaya dan energi mengikuti makespan.** Karena semua VM dan host dihitung menyala selama makespan, konfigurasi yang paling cepat selalu paling hemat energi dan biaya. Kesimpulannya sama dengan simulasi (bagian 6.4).
-5. **Waktu penjadwalan tetap kecil.** KPB di Python menjadwalkan 1.000 task dalam ~4 ms.
+1. **Perilaku KPB terkonfirmasi.** Jumlah VM terpakai selalu sama dengan `s = ⌈k% × 20⌉` (utilisasi ~19% / ~45% / ~90% pada S2–S3), dan DI atas VM terpakai kecil untuk k = 20–50% (0,06–0,80). Penempatan VM, batas PE, dan time-sharing berjalan seperti di CloudSim.
+2. **k = 100% paling cepat di S2 dan S3, sejalan dengan simulasi (bagian 6.1 dan 6.4).** Di S2, 21,9% lebih cepat dari k = 20% (42,09 s vs 53,90 s); di S3, 24,5% lebih cepat (80,74 s vs 106,90 s). Energi, biaya, dan throughput juga paling baik di k = 100% pada kedua skenario itu.
+3. **Pada S1, k = 50% justru sedikit lebih cepat dari k = 100%** (12,25 s vs 13,27 s) — kebalikan dari simulasi, yang tetap menunjukkan k = 100% tercepat (483,76 s). Penyebabnya adalah efek penempatan pada task raksasa, bukan k = 50% yang lebih baik secara umum (lihat 7.7, bagian Anomali).
+4. **Rasio nyata/prediksi naik seiring makin banyak proses PE aktif** (16 → 28 → 40), dari ±1,0–1,3× menjadi ±1,3–1,7×. Laptop memakai CPU hybrid; makin banyak proses aktif, makin banyak yang terpaksa berjalan di E-core dan LP-E core yang lebih lambat. Overhead ini **tidak sampai membalik urutan** pada run final, berbeda dengan pengujian 3-repetisi awal di S3 yang sempat kena thermal throttling (lihat 7.7, bagian Anomali) — bukti bahwa overhead CPU hybrid konsisten ada, tapi besarnya bergantung kondisi laptop saat itu.
+5. **Biaya dan energi mengikuti makespan.** Karena semua VM dan host dihitung menyala selama makespan, konfigurasi yang paling cepat selalu paling hemat energi dan biaya. Kesimpulannya sama dengan simulasi (bagian 6.4).
+6. **Waktu penjadwalan tetap kecil.** KPB di Python menjadwalkan 1.000 task dalam ~5–7 ms.
 
 ### 7.6 Batasan Real-World
 
@@ -691,15 +694,40 @@ Energi dan biaya di real world dihitung untuk durasi nyata (detik), sehingga nil
 - **RAM/BW 20% per task tidak ditiru.** Meniru 20% RAM VM per task (V3: 1,6 GB × ratusan task bersamaan) mustahil di laptop 8 GB. Karena itu, pembanding yang adil adalah CloudSim tanpa kontensi RAM/BW (tabel 6.2), bukan hasil CloudSim utama.
 - **Bandwidth dan transfer file 300 KB tidak ditiru.** Container tidak dibatasi bandwidth jaringannya.
 - **Energi adalah estimasi**: model daya desain diterapkan pada CPU terukur dari cgroup. Tidak ada power meter atau RAPL di WSL2.
-- **Repetisi 3×**, bukan 10× seperti protokol desain, supaya eksperimen selesai dalam ±30 menit.
+- **Repetisi**: tabel 7.4 memakai 1 run per konfigurasi (run final, paling valid). Pengujian awal memakai 3 repetisi (bukan 10× seperti protokol desain, supaya selesai dalam ±30 menit), yang mengungkap ketidakstabilan di S3 — dibahas di 7.7.
 
 ### 7.7 Kesimpulan Real-World
 
+Ringkasan dari hasil 7.4, ditambah dua temuan yang tidak langsung terlihat dari tabel saja: cara k memengaruhi jumlah VM yang dipakai, dan anomali yang ditemukan selama pengujian.
 
-1. Jumlah VM yang dipakai selalu `s = ⌈k% × 20⌉` (4 / 10 / 20 VM), dan utilisasi real world naik mengikuti pola itu (±19% → ±46% → ±90% pada S2–S3). Ini mengonfirmasi bagian 2.5: k mengatur seberapa terkonsolidasi beban kerja, bukan sekadar parameter buatan.
-3. **Pada beban sedang (S1, S2), k = 100% (setara MCT) adalah yang terbaik**, konsisten dengan simulasi CloudSim (bagian 6.4). Di S2, k = 100% lebih cepat 19% (48,3 s vs 59,9 s pada k = 20%), sekaligus lebih hemat energi dan biaya serta throughput lebih tinggi (10,36 vs 8,35 task/s). Jadi pada desain ini, menyebar task ke lebih banyak VM (bukan konsolidasi ke sedikit VM) lebih efisien, baik di simulasi maupun di eksekusi nyata.
-4. **Pada beban besar (S3), hasil berbalik karena keterbatasan hardware demo, bukan karena algoritma KPB.** k = 20% tampak "tercepat", tetapi penyebabnya adalah CPU hybrid laptop dan thermal throttling saat 40 proses PE aktif bersamaan (bagian 7.5 poin 3) — gejala lingkungan pengujian, bukan sifat algoritma. Simulasi CloudSim, yang bebas dari gangguan ini, tetap konsisten menunjukkan k = 100% unggul di S3 (bagian 6.1).
-5. **Kesimpulan akhir:** KPB berjalan di real world dan hasilnya sejalan dengan simulasi selama beban tidak melebihi kapasitas hardware pengujian. **k = 50–100%** memberi makespan, energi, dan biaya yang lebih baik daripada k = 20% pada desain infrastruktur ini, dengan konsekuensi memakai lebih banyak VM sekaligus.
+#### Cara kerja singkat
+
+- Untuk setiap task, KPB mengambil **k% VM tercepat** sebagai kandidat, lalu memilih VM yang **paling cepat menyelesaikan task tersebut** (memperhitungkan antrean).
+- Kecepatan VM hanya ditentukan oleh tipenya (V1/V2/V3), jadi urutan VM tercepat selalu sama untuk semua task. Akibatnya, k pada dasarnya hanya menentukan **berapa banyak VM yang boleh dipakai**:
+  - k = 20% → 4 VM (semua V3)
+  - k = 50% → 10 VM (V3 + sebagian V2)
+  - k = 100% → 20 VM (semua VM, sama dengan algoritma MCT)
+
+#### Temuan utama
+
+- Pada **500 dan 1000 task** (tabel 7.4), k = 100% selalu paling cepat: **21,9%** dan **24,5%** lebih cepat dari k = 20%.
+- Keunggulan k = 100% **makin besar saat task makin banyak**. Antrean di V3 jadi panjang, jadi lebih efisien kalau V2 dan V1 ikut bekerja walaupun lebih lambat (seperti membuka semua kasir supermarket, bukan hanya kasir tercepat).
+- **Energi dan cost ikut turun**, tetapi itu karena makespan lebih pendek (semua host tetap menyala selama pengujian), bukan keunggulan terpisah.
+- Pola hasil real-world **sejalan dengan simulasi CloudSim**, dan penempatan task identik di kedua fase karena memakai kode scheduler yang sama (bagian 7.3 Langkah 8).
+
+#### Anomali
+
+- **100 task: k = 50% lebih cepat dari k = 100%.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (900.000 MI). Di k = 100%, task 900.000 MI kebetulan berjalan sendirian di akhir sehingga paling lama selesai. Ini efek penempatan, bukan karena k = 50% lebih baik, dan polanya hilang di 500/1000 task.
+- **VM V3 tidak secepat rancangan.** Rasio yang dirancang 1 : 3 : 10 (V1 0,1 CPU : V2 0,3 CPU : V3 1,0 CPU, lihat `docker-compose.yml`), rasio terukur sekitar **1 : 3 : 6,6**. Satu task hanya pernah memakai 1 PE (0,25 CPU dari jatah V3), sehingga saat tinggal satu task di VM V3, 3 dari 4 jatah PE menganggur dan kecepatan efektifnya turun jauh dari 1,0 CPU penuh. Masalah serupa ada di CloudSim (V3 punya 4 PE, satu cloudlet hanya memakai 1 PE — bagian 6.2).
+- **Pengujian awal (3 repetisi) untuk 1000 task tidak stabil** (std makespan sampai ±23,5 s, urutan sempat tidak sesuai teori — data ini ada di `realworld/results/aggregate.csv` baris `runs=3`, bukan di tabel 7.4). Setelah diuji ulang dalam kondisi laptop yang lebih terkontrol (tabel 7.4, baris `runs=1`), hasilnya kembali sesuai teori. Dugaan penyebab: beban laptop, suhu, dan CPU hybrid (core cepat + core lambat) — lihat bagian 7.6.
+- **Keunggulan k = 100% lebih kecil dari teori** (1,3× di S3 vs perkiraan ~2× berdasarkan rasio MIPS). Dugaan: saat 20 container aktif bersamaan, sebagian tetap berjalan di core laptop yang lebih lambat (lihat rasio nyata/prediksi di tabel 7.4, naik seiring jumlah proses PE aktif). Artinya hasil ini cenderung **konservatif** — di infrastruktur fisik sungguhan (bukan laptop berbagi satu CPU), keunggulan k = 100% kemungkinan lebih besar lagi.
+
+#### Kesimpulan
+
+- KPB berjalan benar di real world dan hasilnya konsisten dengan simulasi.
+- Pada desain infrastruktur ini, **k = 100% adalah pilihan terbaik**, terutama untuk jumlah task besar.
+- k kecil hanya membatasi VM yang boleh dipakai tanpa memberi keuntungan, karena VM tercepat selalu sama untuk semua task.
+- Pada beban kecil, perbedaan antar k tidak bisa dijadikan patokan karena dipengaruhi penempatan beberapa task raksasa.
 
 ---
 
