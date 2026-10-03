@@ -15,10 +15,7 @@ import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
 import org.cloudbus.cloudsim.vms.Vm;
 import project.metrics.EnergyMeter;
 
-/**
- * Builds the CloudSim Plus scenario from the project design and runs it with a
- * task-to-VM mapping produced by a scheduler.
- */
+
 public final class SimulationSetup {
 
 	/** Cloudlet file and output size (KB), design section 1.3. */

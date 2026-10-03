@@ -2,16 +2,6 @@ package project.scheduler;
 
 import java.util.Arrays;
 
-/**
- * K-Percent Best (KPB) heuristic (Maheswaran et al., 1999).
- *
- * Tasks are processed in arrival order (no sorting). For each task, only the
- * k% of VMs with the smallest execution time for that task are considered,
- * and the task is assigned to the candidate with the smallest completion time
- * (VM ready time + execution time).
- *
- * k = 100% behaves like MCT; k = 100/m % behaves like MET.
- */
 public final class KpbScheduler implements Scheduler {
 
 	public static final double DEFAULT_K_PERCENT = 20.0;

@@ -46,7 +46,7 @@ public final class DatacenterFactory {
 		public double totalMips() { return pes * mipsPerPe; }
 	}
 
-	/** Scheduling interval (s): periodic updates so host utilization can be integrated. */
+	/** Scheduling interval  */
 	public static final double SCHEDULING_INTERVAL = 1.0;
 
 	private static final int HOSTS_PER_DATACENTER = 3;
@@ -63,7 +63,7 @@ public final class DatacenterFactory {
 	}
 
 	/**
-	 * Costs follow design table 2.2: per second, per GB RAM, per GB storage, per
+	 * Costs follow design table per second, per GB RAM, per GB storage, per
 	 * Mbps bandwidth. CloudSim expects RAM and storage costs per MB.
 	 */
 	private static Datacenter create(CloudSim simulation, HostType type, double costPerSecond,
@@ -95,7 +95,6 @@ public final class DatacenterFactory {
 		host.setVmScheduler(new VmSchedulerTimeShared());
 		// Linear model P(u) = P_idle + (P_max - P_idle) * u
 		host.setPowerModel(new PowerModelHostSimple(type.maxPower, type.idlePower));
-		host.enableUtilizationStats();
 		return host;
 	}
 

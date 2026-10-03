@@ -11,9 +11,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 import org.cloudbus.cloudsim.cloudlets.Cloudlet;
+import org.cloudbus.cloudsim.datacenters.Datacenter;
+import org.cloudbus.cloudsim.datacenters.DatacenterCharacteristics;
+import org.cloudbus.cloudsim.hosts.Host;
+import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletScheduler;
 import org.cloudbus.cloudsim.vms.Vm;
 import org.cloudsimplus.util.Log;
+import org.slf4j.LoggerFactory;
 import project.data.GoCJLoader;
 import project.metrics.MetricsCollector;
 import project.metrics.Result;
@@ -21,13 +27,14 @@ import project.model.FitnessEvaluator;
 import project.scheduler.KpbScheduler;
 import project.scheduler.Scheduler;
 import project.setup.CloudSimAdapter;
+import project.setup.DatacenterFactory;
 import project.setup.SimulationSetup;
 import project.setup.VmFactory;
 
 /**
  * Runs KPB on the CloudSim Plus scenario of the project design.
  *
- * Usage: Experiment [dataset] [k_percent]
+ * Usage: Experiment [dataset] [k_percent]   (-Dlog=error hides the CloudSim log)
  */
 public final class Experiment {
 	private static final Path OUTPUT_DIR = Path.of("results", "simulation");
@@ -35,7 +42,10 @@ public final class Experiment {
 	private Experiment() { }
 
 	public static void main(String[] args) throws IOException {
-		Log.setLevel(Level.ERROR);
+		// CloudSim log (DC start, VM -> host allocation, cloudlet -> VM). Silence with -Dlog=error.
+		Log.setLevel(Level.toLevel(System.getProperty("log", "info"), Level.INFO));
+		// RAM/BW contention warnings are logged per cloudlet every tick and would flood the output.
+		Log.setLevel(LoggerFactory.getLogger(CloudletScheduler.class.getSimpleName()), Level.ERROR);
 		Path dataset = args.length == 0 ? null : Path.of(args[0]);
 		double[] taskLengths = dataset == null
 				? new double[] {900_000, 600_000, 450_000, 300_000, 150_000}
@@ -57,7 +67,7 @@ public final class Experiment {
 		Result result = MetricsCollector.collect(scheduler.getName(), setup, schedulingMillis);
 		double analyticMakespan = new FitnessEvaluator(taskLengths, vmCapacities).makespan(mapping);
 
-		printPlacement(setup.vmList());
+		printInfrastructure(setup);
 		System.out.printf(Locale.US, "scheduler=%s%n", result.scheduler());
 		System.out.printf(Locale.US, "tasks=%d, vmsCreated=%d/%d, cloudletsFinished=%d/%d%n",
 				result.tasks(), setup.broker().getVmCreatedList().size(), setup.vmList().size(),
@@ -78,13 +88,36 @@ public final class Experiment {
 		}
 	}
 
-	private static void printPlacement(List<Vm> vms) {
-		StringBuilder line = new StringBuilder("placement=");
-		for (Vm vm : vms) {
-			line.append(String.format("vm%d:%s@DC%d/H%d ", vm.getId(), vm.getDescription(),
-					vm.getHost().getDatacenter().getId(), vm.getHost().getId()));
+	/** Datacenter, host and VM specs read back from the CloudSim objects, to compare with the design. */
+	private static void printInfrastructure(SimulationSetup setup) {
+		System.out.println("=== Infrastruktur CloudSim ===");
+		for (Datacenter dc : setup.datacenters()) {
+			DatacenterCharacteristics ch = dc.getCharacteristics();
+			String name = DatacenterFactory.typeOf(dc.getHost(0)) == DatacenterFactory.HostType.A_PERFORMANCE
+					? "Performance" : "Efficiency";
+			System.out.printf(Locale.US, "DC-%d %s | %s / %s / %s | %d host | $%.2f/s, $%.2f/GB RAM, "
+							+ "$%.4f/GB storage, $%.3f/Mbps BW%n",
+					dc.getId(), name, ch.getArchitecture(), ch.getOs(), ch.getVmm(), dc.getHostList().size(),
+					ch.getCostPerSecond(), ch.getCostPerMem() * 1024, ch.getCostPerStorage() * 1024,
+					ch.getCostPerBw());
+			for (Host host : dc.getHostList()) {
+				// VMs are already deallocated when the simulation ends, so group by vm.getHost().
+				List<Vm> vms = setup.vmList().stream().filter(vm -> vm.getHost() == host).collect(Collectors.toList());
+				long usedPes = vms.stream().mapToLong(Vm::getNumberOfPes).sum();
+				System.out.printf(Locale.US, "  Host %d | %d PE x %.0f MIPS | RAM %d GB | BW %d Mbps | "
+								+ "P idle %.0f W, P max %.0f W | PE terpakai %d/%d%n",
+						host.getId(), host.getNumberOfPes(), host.getMips(), host.getRam().getCapacity() / 1024,
+						host.getBw().getCapacity(), host.getPowerModel().getPower(0),
+						host.getPowerModel().getPower(1), usedPes, host.getNumberOfPes());
+				for (Vm vm : vms) {
+					System.out.printf(Locale.US, "    vm%-2d %s | %d PE x %.0f MIPS | RAM %d GB | BW %d Mbps%n",
+							vm.getId(), vm.getDescription(), vm.getNumberOfPes(), vm.getMips(),
+							vm.getRam().getCapacity() / 1024, vm.getBw().getCapacity());
+				}
+			}
 		}
-		System.out.println(line.toString().trim());
+		System.out.printf("Total: %d datacenter, %d host, %d VM%n%n",
+				setup.datacenters().size(), setup.hosts().size(), setup.vmList().size());
 	}
 
 	private static double[] round(double[] values) {
