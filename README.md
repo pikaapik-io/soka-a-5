@@ -33,6 +33,7 @@
   - [7.4 Hasil Ujicoba Real-World](#74-hasil-ujicoba-real-world)
   - [7.5 Analisis Real-World](#75-analisis-real-world)
   - [7.6 Batasan Real-World](#76-batasan-real-world)
+  - [7.7 Kesimpulan Real-World](#77-kesimpulan-real-world)
 - [8. Panduan Menjalankan Sim](#8-panduan-menjalankan-sim)
 - [9. Struktur Direktori](#9-struktur-direktori)
 - [10. Status dan Batasan](#10-status-dan-batasan)
@@ -691,6 +692,14 @@ Energi dan biaya di real world dihitung untuk durasi nyata (detik), sehingga nil
 - **Bandwidth dan transfer file 300 KB tidak ditiru.** Container tidak dibatasi bandwidth jaringannya.
 - **Energi adalah estimasi**: model daya desain diterapkan pada CPU terukur dari cgroup. Tidak ada power meter atau RAPL di WSL2.
 - **Repetisi 3×**, bukan 10× seperti protokol desain, supaya eksperimen selesai dalam ±30 menit.
+
+### 7.7 Kesimpulan Real-World
+
+1. **Implementasi KPB terbukti benar, bukan cuma simulasi di atas kertas.** Mapping yang dihasilkan `kpb_schedule()` di Python **identik 100%** dengan `KpbScheduler.java` untuk k = 20%, 50%, dan 100% (bagian 7.3 Langkah 8), penempatan 20 container selalu cocok dengan `placement.csv` hasil CloudSim, dan semua task di semua run selesai tanpa kegagalan. Algoritma yang didesain, disimulasikan, dan benar-benar dieksekusi di infrastruktur nyata adalah algoritma yang sama persis.
+2. **Perilaku k sesuai teori.** Jumlah VM yang dipakai selalu `s = ⌈k% × 20⌉` (4 / 10 / 20 VM), dan utilisasi real world naik mengikuti pola itu (±19% → ±46% → ±90% pada S2–S3). Ini mengonfirmasi bagian 2.5: k mengatur seberapa terkonsolidasi beban kerja, bukan sekadar parameter buatan.
+3. **Pada beban sedang (S1, S2), k = 100% (setara MCT) adalah yang terbaik**, konsisten dengan simulasi CloudSim (bagian 6.4). Di S2, k = 100% lebih cepat 19% (48,3 s vs 59,9 s pada k = 20%), sekaligus lebih hemat energi dan biaya serta throughput lebih tinggi (10,36 vs 8,35 task/s). Jadi pada desain ini, menyebar task ke lebih banyak VM (bukan konsolidasi ke sedikit VM) yang terbukti lebih efisien, baik di simulasi maupun di eksekusi nyata.
+4. **Pada beban besar (S3), hasil berbalik karena keterbatasan hardware demo, bukan karena algoritma KPB.** k = 20% tampak "tercepat", tetapi penyebabnya adalah CPU hybrid laptop dan thermal throttling saat 40 proses PE aktif bersamaan (bagian 7.5 poin 3) — gejala lingkungan pengujian, bukan sifat algoritma. Simulasi CloudSim, yang bebas dari gangguan ini, tetap konsisten menunjukkan k = 100% unggul di S3 (bagian 6.1).
+5. **Kesimpulan akhir:** KPB berjalan benar di real world dan hasilnya sejalan dengan simulasi selama beban tidak melebihi kapasitas hardware pengujian. Untuk kebutuhan praktis, **k = 50–100%** memberi makespan, energi, dan biaya yang lebih baik daripada k = 20% pada desain infrastruktur ini, dengan konsekuensi memakai lebih banyak VM sekaligus.
 
 ---
 
