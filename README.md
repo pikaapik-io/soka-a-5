@@ -37,7 +37,8 @@
 - [8. Panduan Menjalankan Sim](#8-panduan-menjalankan-sim)
 - [9. Struktur Direktori](#9-struktur-direktori)
 - [10. Status dan Batasan](#10-status-dan-batasan)
-- [11. Referensi](#11-referensi)
+- [11. Kesimpulan KPB](#11-kesimpulan-kpb)
+- [12. Referensi](#12-referensi)
 
 ---
 
@@ -942,7 +943,17 @@ Asumsi yang tetap berlaku (Desain bagian 4.5): tanpa migrasi VM, tanpa kegagalan
 
 ---
 
-## 11. Referensi
+## 11. Kesimpulan KPB
+
+KPB adalah algoritma yang cepat dan sederhana, sehingga cocok digunakan sebagai *baseline penjadwalan task independen* pada sistem *heterogen*. 
+
+Pada infrastruktur dengan heterogenitas konsisten, urutan VM tercepat sama untuk semua task. Hasil uji CloudSim untuk 100, 500, dan 1.000 task menunjukkan k = 100% (setara MCT) menghasilkan makespan terendah. 
+
+Keunggulan khas KPB lebih relevan ketika jenis task beragam dan urutan VM terbaik dapat berubah menurut karakteristik task. Dalam kondisi itu, pemilihan subset kandidat k% memberi kompromi antara cakupan kandidat dan biaya pencarian. Temuan k = 100% di sini adalah hasil untuk desain dan objective makespan yang diuji, bukan jaminan bahwa nilai tersebut selalu terbaik pada infrastruktur lain.
+
+Jika energi dan biaya ingin dioptimalkan secara langsung, diperlukan algoritma atau fungsi objektif multi-objective. Pada eksperimen ini energi dan biaya terutama mengikuti makespan karena seluruh host dan VM tetap dihitung aktif selama eksekusi.
+
+## 12. Referensi
 
 1. Maheswaran M, Ali S, Siegel HJ, Hensgen D, Freund RF. Dynamic matching and scheduling of a class of independent tasks onto heterogeneous computing systems. *Proc. 8th Heterogeneous Computing Workshop (HCW '99)*. 1999:30–44.
 2. Braun TD, et al. A comparison of eleven static heuristics for mapping a class of independent tasks onto heterogeneous distributed computing systems. *Journal of Parallel and Distributed Computing*. 2001;61(6):810–837.
