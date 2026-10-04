@@ -27,7 +27,8 @@ public final class SimulationSetup {
 	private final List<Datacenter> datacenters;
 	private final DatacenterBroker broker;
 	private final List<Vm> vmList;
-	private final List<Cloudlet> cloudlets;
+	private final double[] taskLengths;
+	private List<Cloudlet> cloudlets = new ArrayList<>();
 	private final List<Host> hosts = new ArrayList<>();
 	private final EnergyMeter energyMeter;
 	private int[] mappingUsed;
@@ -40,14 +41,16 @@ public final class SimulationSetup {
 		// Keep every VM alive until the batch ends so idle VMs are billed too.
 		broker.setVmDestructionDelay(Double.MAX_VALUE);
 		vmList = VmFactory.createDefaultVms();
-		cloudlets = createCloudlets(taskLengths);
+		this.taskLengths = taskLengths.clone();
 		energyMeter = new EnergyMeter(simulation, hosts);
 	}
 
-	private static List<Cloudlet> createCloudlets(double[] lengths) {
+	private List<Cloudlet> createCloudlets(int[] mapping) {
 		List<Cloudlet> list = new ArrayList<>();
-		for (int i = 0; i < lengths.length; i++) {
-			Cloudlet cloudlet = new CloudletSimple(i, (long) lengths[i], 1)
+		for (int i = 0; i < taskLengths.length; i++) {
+			int pes = (int) vmList.get(mapping[i]).getNumberOfPes();
+			long lengthPerPe = Math.round(taskLengths[i] / pes);
+			Cloudlet cloudlet = new CloudletSimple(i, lengthPerPe, pes)
 					.setFileSize(FILE_SIZE)
 					.setOutputSize(OUTPUT_SIZE)
 					.setUtilizationModelCpu(new UtilizationModelFull())
@@ -60,9 +63,10 @@ public final class SimulationSetup {
 
 	/** Binds cloudlet i to VM mapping[i], runs the simulation and validates VM creation. */
 	public void run(int[] mapping) {
-		if (mapping.length != cloudlets.size()) {
+		if (mapping.length != taskLengths.length) {
 			throw new IllegalArgumentException("Mapping must contain one VM for every cloudlet");
 		}
+		cloudlets = createCloudlets(mapping);
 		mappingUsed = mapping.clone();
 		Map<Vm, Datacenter> plan = ConstrainedPlacement.planDatacenters(datacenters, vmList);
 		broker.setDatacenterMapper((lastDc, vm) -> plan.get(vm));

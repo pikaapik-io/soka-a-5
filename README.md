@@ -59,14 +59,12 @@ Lingkungan cloud terdiri atas VM dengan kapasitas yang berbeda-beda, sedangkan u
 Parameter **k** mengatur perilaku KPB:
 
 ```
-k = 100/m %  →  hanya 1 kandidat   →  KPB = MET
-k = 100 %    →  semua VM kandidat  →  KPB = MCT
-1/m < k < 1  →  kompromi: VM lambat tidak dipakai, antrean tetap diperhitungkan
+k = 100/m %          →  hanya 1 kandidat     →  KPB = MET
+k = 100 %            →  semua VM kandidat    →  KPB = MCT
+100/m % < k < 100 %  →  kompromi: VM lambat tidak dipakai, antrean tetap diperhitungkan
 ```
 
 Default yang dipakai di project ini adalah **k = 20%**, yaitu 4 dari 20 VM.
-
-> **Perbedaan dengan LJFP.** LJFP mengurutkan task dari yang terpanjang, lalu menjalankan MCT pada **semua** VM. KPB **tidak** mengurutkan task (task diproses sesuai urutan kedatangan) dan hanya mempertimbangkan **subset k% VM terbaik** untuk setiap task.
 
 ---
 
@@ -134,7 +132,7 @@ Data contoh bawaan program memakai 5 task dan 20 VM dengan k = 20%, sehingga s =
 | 3 | 300.000 | 30 | 90, 60, 45, 0 | 120, 90, 75, 30 | VM3 |
 | 4 | 150.000 | 15 | 90, 60, 45, 30 | 105, 75, 60, **45** | VM3 |
 
-Hasilnya `mapping = [0, 1, 2, 3, 3]`, sama dengan output `mvn -q exec:java`. Menurut rumus f1 desain, makespan-nya 90 s. Saat mapping ini dijalankan di CloudSim, makespan-nya **360,21 s**, karena cloudlet hanya memakai 1 PE (2.500 MIPS) dari 4 PE milik V3 (lihat bagian 6.2).
+Hasilnya `mapping = [0, 1, 2, 3, 3]`, sama dengan output `mvn -q exec:java`. Menurut rumus f1 desain, makespan-nya 90 s. Dengan Cloudlet memakai seluruh PE VM tujuan dan scheduler `SpaceShared`, makespan CloudSim menjadi **90,21 s** (lihat bagian 6.2).
 
 ### 2.5 Perilaku KPB pada VM yang Konsisten
 
@@ -187,7 +185,7 @@ flowchart TD
 | Arsitektur / OS / VMM | x86 / Linux / Xen | x86 / Linux / Xen |
 | VmAllocationPolicy | VmAllocationPolicySimple + batasan C3–C6 | VmAllocationPolicySimple + batasan C3–C6 |
 | VmScheduler | VmSchedulerTimeShared | VmSchedulerTimeShared |
-| CloudletScheduler | CloudletSchedulerTimeShared | CloudletSchedulerTimeShared |
+| CloudletScheduler VM | CloudletSchedulerSpaceShared | CloudletSchedulerSpaceShared |
 | Cost per second | $0,05 | $0,03 |
 | Cost per RAM (GB) | $0,02 | $0,01 |
 | Cost per storage (GB) | $0,001 | $0,0008 |
@@ -244,7 +242,7 @@ flowchart LR
     M --> O["Experiment<br/>stdout + results/simulation/*.csv"]
 ```
 
-KPB hanya melihat panjang task dan kapasitas VM (rumus f1 desain) untuk mengambil keputusan. Eksekusinya sepenuhnya dilakukan oleh CloudSim, termasuk pembagian CPU antar cloudlet (time-shared), batas 1 PE per cloudlet, RAM/BW, daya, dan biaya.
+KPB hanya melihat panjang task dan kapasitas VM (rumus f1 desain) untuk mengambil keputusan. Di CloudSim, setiap Cloudlet memakai semua PE VM tujuan dan scheduler `SpaceShared` mengantrekannya per VM. RAM/BW, daya, dan biaya tetap dimodelkan oleh CloudSim.
 
 ### 4.2 Daftar File
 
@@ -255,7 +253,7 @@ KPB hanya melihat panjang task dan kapasitas VM (rumus f1 desain) untuk mengambi
 | [`Experiment.java`](src/main/java/project/Experiment.java) | Entry point: dataset → KPB → CloudSim → metrik → CSV |
 | [`GoCJLoader.java`](src/main/java/project/data/GoCJLoader.java) | Membaca file GoCJ (satu nilai MI per baris) |
 | [`DatacenterFactory.java`](src/main/java/project/setup/DatacenterFactory.java) | 2 DC, 6 host, model daya, biaya, scheduling interval 1 s |
-| [`VmFactory.java`](src/main/java/project/setup/VmFactory.java) | 20 VM (V3/V2/V1) dengan `CloudletSchedulerTimeShared` |
+| [`VmFactory.java`](src/main/java/project/setup/VmFactory.java) | 20 VM (V3/V2/V1) dengan `CloudletSchedulerSpaceShared` |
 | [`ConstrainedPlacement.java`](src/main/java/project/setup/ConstrainedPlacement.java) | Pemilihan host yang menegakkan C3–C6, dan rencana VM → DC |
 | [`SimulationSetup.java`](src/main/java/project/setup/SimulationSetup.java) | Broker, cloudlet (300 KB, UtilizationModel), binding, validasi |
 | [`CloudSimAdapter.java`](src/main/java/project/setup/CloudSimAdapter.java) | Mengubah VM CloudSim menjadi array kapasitas untuk scheduler |
@@ -305,8 +303,8 @@ Pemetaan ke cloudlet (Desain bagian 1.3):
 
 | Parameter cloudlet | Nilai |
 |:---|:---|
-| `length` | Dari dataset GoCJ (MI) |
-| `numberOfPes` | 1 |
+| `length` | Panjang per PE: panjang MI dataset dibagi jumlah PE VM tujuan |
+| `numberOfPes` | Sama dengan PE VM tujuan (V3=4, V2=2, V1=1) |
 | `fileSize` / `outputSize` | 300 KB / 300 KB |
 | `utilizationModelCpu` | `UtilizationModelFull` (100%) |
 | `utilizationModelRam` / `Bw` | `UtilizationModelDynamic` 20% |
@@ -316,41 +314,39 @@ Pemetaan ke cloudlet (Desain bagian 1.3):
 
 ## 6. Hasil Simulasi (CloudSim Plus)
 
-Semua angka di bagian ini berasal dari **simulasi CloudSim Plus penuh**. Simulasi bersifat deterministik: dua kali run menghasilkan angka identik, sehingga cukup dijalankan 1× per konfigurasi (10 run akan memberi std = 0). Data lengkap ada di [`results/simulation/summary.csv`](results/simulation/summary.csv).
+Semua angka di bagian ini berasal dari **simulasi CloudSim Plus penuh setelah perbaikan model PE**. Setiap Cloudlet memakai semua PE VM tujuan; angka adalah satu run per konfigurasi. Validasi ulang 3×3 menunjukkan hasil deterministik dan dekat dengan model analitik. CSV historis di [`results/simulation/summary.csv`](results/simulation/summary.csv) masih berisi hasil model lama dan tidak mencakup validasi ulang ini.
 
 ### 6.1 Delapan Metrik Desain
 
 | Skenario | k | Makespan (s) | Energi (kWh) | Avg response (s) | Utilisasi | DI | Throughput (task/s) | Biaya (USD) | Waktu penjadwalan |
 |:---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| S1 (100) | 20% | 1.327,25 | 0,3025 | 577,52 | 14,49% | 6,902 | 0,0753 | 1.659,18 | 0,34 ms |
-| S1 (100) | 50% | 515,16 | 0,1224 | 228,82 | 34,54% | 2,895 | 0,1941 | 684,67 | 0,22 ms |
-| S1 (100) | 100% | **483,76** | **0,1130** | **151,31** | **42,09%** | **1,835** | **0,2067** | **646,99** | 0,46 ms |
-| S2 (500) | 20% | 21.269,22 | 5,0800 | 13.401,81 | 19,09% | 5,238 | 0,0235 | 25.589,54 | 0,57 ms |
-| S2 (500) | 50% | 6.854,69 | 1,7243 | 4.022,77 | 43,28% | 2,311 | 0,0729 | 8.292,11 | 1,33 ms |
-| S2 (500) | 100% | **4.147,56** | **1,0481** | **1.924,67** | **62,50%** | **0,949** | **0,1206** | **5.043,55** | 2,11 ms |
-| S3 (1.000) | 20% | 87.658,41 | 20,7890 | 52.584,63 | 18,07% | 5,533 | 0,0114 | 105.256,57 | 0,91 ms |
-| S3 (1.000) | 50% | 29.110,06 | 7,1889 | 15.464,50 | 38,82% | 2,576 | 0,0344 | 34.998,56 | 1,63 ms |
-| S3 (1.000) | 100% | **15.060,48** | **3,8211** | **7.031,87** | **63,31%** | **0,976** | **0,0664** | **18.139,06** | 2,00 ms |
+| S1 (100) | 20% | 367,80 | 0,0875 | 164,19 | 18,64% | 5,364 | 0,2719 | 506,77 | 0,95 ms |
+| S1 (100) | 50% | 273,35 | 0,0681 | 111,88 | 41,06% | 2,436 | 0,3658 | 393,43 | 0,29 ms |
+| S1 (100) | 100% | **233,08** | **0,0599** | **90,71** | **70,45%** | **0,747** | **0,4290** | **345,11** | 0,82 ms |
+| S2 (500) | 20% | 1.655,38 | 0,3976 | 826,73 | 19,94% | 5,016 | 0,3020 | 2.051,87 | 0,62 ms |
+| S2 (500) | 50% | 1.146,19 | 0,2930 | 565,91 | 48,99% | 2,041 | 0,4362 | 1.440,84 | 1,18 ms |
+| S2 (500) | 100% | **933,07** | **0,2497** | **452,88** | **95,29%** | **0,112** | **0,5359** | **1.185,10** | 1,49 ms |
+| S3 (1.000) | 20% | 3.331,27 | 0,7990 | 1.602,00 | 19,76% | 5,060 | 0,3002 | 4.062,94 | 1,89 ms |
+| S3 (1.000) | 50% | 2.313,56 | 0,5900 | 1.097,82 | 48,48% | 2,063 | 0,4322 | 2.841,69 | 1,65 ms |
+| S3 (1.000) | 100% | **1.880,16** | **0,5020** | **881,11** | **94,40%** | **0,099** | **0,5319** | **2.321,60** | 3,95 ms |
 
 Keterangan: DI dihitung atas 20 VM sesuai definisi desain; biaya = CPU + RAM + bandwidth (`VmCost`); energi mencakup 6 host dari t = 0 sampai makespan, termasuk daya idle.
 
 ### 6.2 CloudSim vs Model Analitik (Rumus f1 Desain)
 
-| Skenario | k | Analitik f1 (s) | CloudSim, RAM/BW 0% (s) | CloudSim, RAM/BW 20% sesuai desain (s) |
+| Skenario | k | Analitik f1 (s) | CloudSim setelah perbaikan (s) | Selisih |
 |:---:|:---:|---:|---:|---:|
-| S1 (100) | 20% | 362,45 | 513,89 | 1.327,25 |
-| S1 (100) | 50% | 270,95 | 373,05 | 515,16 |
-| S1 (100) | 100% | 230,90 | 423,30 | 483,76 |
-| S2 (500) | 20% | 1.630,75 | 1.706,46 | 21.269,22 |
-| S2 (500) | 50% | 1.134,70 | 1.216,04 | 6.854,69 |
-| S2 (500) | 100% | 925,40 | 1.009,70 | 4.147,56 |
-| S3 (1.000) | 20% | 3.278,25 | 3.421,73 | 87.658,41 |
-| S3 (1.000) | 50% | 2.288,00 | 2.469,58 | 29.110,06 |
-| S3 (1.000) | 100% | 1.866,35 | 1.968,56 | 15.060,48 |
+| S1 (100) | 20% | 362,45 | 367,80 | 1,48% |
+| S1 (100) | 50% | 270,95 | 273,35 | 0,88% |
+| S1 (100) | 100% | 230,90 | 233,08 | 0,94% |
+| S2 (500) | 20% | 1.630,75 | 1.655,38 | 1,51% |
+| S2 (500) | 50% | 1.134,70 | 1.146,19 | 1,01% |
+| S2 (500) | 100% | 925,40 | 933,07 | 0,83% |
+| S3 (1.000) | 20% | 3.278,25 | 3.331,27 | 1,62% |
+| S3 (1.000) | 50% | 2.288,00 | 2.313,56 | 1,12% |
+| S3 (1.000) | 100% | 1.866,35 | 1.880,16 | 0,74% |
 
-Kolom "RAM/BW 0%" adalah uji sensitivitas: konfigurasi sama, hanya `UtilizationModelDynamic` RAM/BW diset 0.
-
-Contoh 5 task (bagian 2.4) memperlihatkan perbedaan paling dasar. Rumus f1 memberi makespan 90 s, sedangkan CloudSim memberi **360,21 s**. Cloudlet hanya punya 1 PE, sehingga task 900.000 MI di V3 berjalan di 2.500 MIPS (satu PE), bukan 10.000 MIPS (empat PE).
+Semua konfigurasi kini berada dalam selisih 0,74–1,62% dari f1. Contoh 5 task (bagian 2.4) menghasilkan 90,21 s di CloudSim dibanding 90 s analitik.
 
 ### 6.3 Log Eksekusi
 
@@ -359,22 +355,20 @@ $ mvn -q exec:java -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_500.txt 
 placement=vm0:V3@DC1/H0 vm1:V3@DC1/H1 vm2:V3@DC1/H2 vm3:V3@DC1/H0 vm4:V2@DC1/H1 ... vm19:V1@DC2/H0
 scheduler=KPB(k=50.0%)
 tasks=500, vmsCreated=20/20, cloudletsFinished=500/500
-makespan=6854.690 s (analitik 1134.700 s), energy=1.7243 kWh, avgResponse=4022.775 s
-utilization=43.28%, DI=2.3106 (VM terpakai 0.3211), throughput=0.0729 task/s
-cost=$8292.11, schedulingTime=1.327 ms
+makespan=1146.190 s (analitik 1134.700 s), energy=0.2930 kWh, avgResponse=565.906 s
+utilization=48.99%, DI=2.0411 (VM terpakai 0.0371), throughput=0.4362 task/s
+cost=$1440.84, schedulingTime=1.182 ms
 mapping=[0, 1, 2, 3, 0, 1, 2, 2, 3, 1, 0, 1, 4, 3, 5, 6, 7, 2, 8, 9, ...]
-vmFinish=[6697.69, 6854.69, 6849.69, 6108.69, 5716.69, 4949.69, 5059.69, 5728.69, 5287.54, 6079.54, 0.0 × 10]
 ```
 
 Log semua run ada di `results/simulation/log_<dataset>_k<K>.txt`.
 
 ### 6.4 Analisis Simulasi
 
-1. **k = 100% terbaik di semua metrik dan skenario.** Makespan, energi, response time, biaya, dan DI semuanya paling kecil pada k = 100%. Dibanding k = 20%, makespan S3 turun 83% (87.658 → 15.060 s).
-2. **Konsolidasi tidak menghemat energi di desain ini.** Pada k = 20% hanya 4 VM V3 yang dipakai, tetapi keenam host tetap menyala (daya idle 741 W total), dan makespan jauh lebih lama. Akibatnya energi S3 justru 5,4× lebih besar (20,79 vs 3,82 kWh). Daya idle mendominasi: konsolidasi baru menguntungkan bila host yang menganggur dimatikan, yang tidak dimodelkan di desain (tanpa migrasi atau konsolidasi dinamis, bagian 6 desain).
-3. **Kontensi RAM/BW adalah penyebab utama makespan membengkak.** Dengan `CloudletSchedulerTimeShared`, semua cloudlet di satu VM aktif bersamaan, dan masing-masing meminta 20% RAM dan BW VM. Mulai cloudlet ke-6 RAM VM habis, lalu CloudSim memakai virtual memory dan memperlambat eksekusi. Pada S3 k = 20% (~250 cloudlet per VM V3), makespan menjadi 87.658 s, padahal hanya 3.422 s bila RAM/BW tidak membebani (tabel 6.2). Jadi pada desain ini, menumpuk task di sedikit VM sangat merugikan.
-4. **Rumus f1 desain terlalu optimis.** Rumus menganggap 1 task bisa memakai seluruh PE VM. Tanpa kontensi RAM/BW pun CloudSim 4–83% lebih lambat dari f1, karena cloudlet 1 PE tidak bisa memakai PE lain. Selisih terbesar ada di S1, karena task besar menjadi penentu makespan.
-5. **Waktu penjadwalan sangat kecil.** KPB menjadwalkan 1.000 task dalam ~2 ms (metrik 8), sehingga overhead algoritma dapat diabaikan.
+1. **k = 100% memberi makespan terendah di ketiga ukuran dataset.** Dibanding k = 20%, makespan turun 36,6% pada S1, 43,6% pada S2, dan 43,5% pada S3.
+2. **Energi dan biaya juga terendah pada k = 100% di matriks ini.** Keenam host tetap dimodelkan aktif, sehingga penurunan makespan mengurangi energi idle dan biaya yang bergantung pada durasi.
+3. **Anomali satu-PE pada V3 sudah teratasi di CloudSim.** Cloudlet memakai semua PE VM tujuan; V3 menjalankan satu Cloudlet pada 4 PE dengan scheduler `SpaceShared`. Makespan seluruh 9 konfigurasi hanya 0,74–1,62% di atas f1, bukan beberapa kali lipat.
+4. **Waktu penjadwalan tetap kecil.** KPB menjadwalkan hingga 1.000 task dalam kurang dari 4 ms pada pengujian ini.
 
 ---
 
@@ -432,7 +426,7 @@ flowchart LR
 Tiga hal yang membuat eksekusinya nyata, bukan sekadar meniru durasi:
 
 1. **Beban berbasis jumlah kerja.** Worker tidak diberi tahu berapa lama harus berjalan. Jumlah iterasi task sama di container mana pun, dan perbedaan waktu berasal dari batas CPU kernel (CFS, `cpu_quota` dengan periode 10 ms) serta batas per PE.
-2. **Batas 1 PE per task.** Seperti cloudlet CloudSim, satu task tidak bisa memakai lebih dari satu PE. Task 900.000 MI di V3 tetap berjalan di ~2.500 MIPS walaupun V3 sedang kosong.
+2. **Batas 1 PE per task pada worker Docker.** Satu task dijalankan oleh satu proses PE; V3 dapat mengerjakan hingga empat task berbeda bersamaan, tetapi satu task tidak memakai keempat PE. Ini berbeda dari CloudSim terbaru, yang memberi satu Cloudlet semua PE VM tujuannya.
 3. **Mapping identik dengan simulasi.** `kpb_schedule()` di Python menghasilkan mapping yang sama persis dengan `KpbScheduler.java` (diverifikasi untuk S1 k=20%, S2 k=50%, S3 k=100%, dan S3 k=20%).
 
 ### 7.3 Cara Menjalankan
@@ -718,13 +712,14 @@ Ringkasan dari hasil 7.4, ditambah dua temuan yang tidak langsung terlihat dari 
 #### Anomali
 
 - **100 task: k = 50% lebih cepat dari k = 100%.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (900.000 MI). Di k = 100%, task 900.000 MI kebetulan berjalan sendirian di akhir sehingga paling lama selesai. Ini efek penempatan, bukan karena k = 50% lebih baik, dan polanya hilang di 500/1000 task.
-- **VM V3 tidak secepat rancangan.** Rasio yang dirancang 1 : 3 : 10 (V1 0,1 CPU : V2 0,3 CPU : V3 1,0 CPU, lihat `docker-compose.yml`), rasio terukur sekitar **1 : 3 : 6,6**. Satu task hanya pernah memakai 1 PE (0,25 CPU dari jatah V3), sehingga saat tinggal satu task di VM V3, 3 dari 4 jatah PE menganggur dan kecepatan efektifnya turun jauh dari 1,0 CPU penuh. Masalah serupa ada di CloudSim (V3 punya 4 PE, satu cloudlet hanya memakai 1 PE — bagian 6.2).
+- **Model satu-PE tetap berlaku untuk runner Docker, bukan CloudSim.** Worker Docker menjalankan satu task pada satu PE; karena itu V3 dapat menyisakan PE ketika task yang aktif kurang dari empat. Di CloudSim masalah satu-PE sudah diperbaiki: setiap Cloudlet memakai seluruh PE VM tujuan. Validasi CloudSim terbaru untuk 9 kombinasi menunjukkan makespan hanya 0,74–1,62% di atas f1 (bagian 6.2).
 - **Pengujian awal (3 repetisi) untuk 1000 task tidak stabil** (std makespan sampai ±23,5 s, urutan sempat tidak sesuai teori — data ini ada di `realworld/results/aggregate.csv` baris `runs=3`, bukan di tabel 7.4). Setelah diuji ulang dalam kondisi laptop yang lebih terkontrol (tabel 7.4, baris `runs=1`), hasilnya kembali sesuai teori. Dugaan penyebab: beban laptop, suhu, dan CPU hybrid (core cepat + core lambat) — lihat bagian 7.6.
 - **Keunggulan k = 100% lebih kecil dari teori** (1,3× di S3 vs perkiraan ~2× berdasarkan rasio MIPS). Dugaan: saat 20 container aktif bersamaan, sebagian tetap berjalan di core laptop yang lebih lambat (lihat rasio nyata/prediksi di tabel 7.4, naik seiring jumlah proses PE aktif). Artinya hasil ini cenderung **konservatif** — di infrastruktur fisik sungguhan (bukan laptop berbagi satu CPU), keunggulan k = 100% kemungkinan lebih besar lagi.
 
 #### Kesimpulan
 
-- KPB berjalan benar di real world dan hasilnya konsisten dengan simulasi.
+- KPB berjalan benar di real world; tren k = 100% untuk beban besar sejalan dengan simulasi, tetapi angka Docker tetap dipengaruhi CPU laptop dan model satu-PE per task.
+- Anomali V3 satu-PE di CloudSim sudah tidak terjadi setelah Cloudlet memakai seluruh PE VM dan `SpaceShared`; hasil 3×3 kini dekat dengan analitik.
 - Pada desain infrastruktur ini, **k = 100% adalah pilihan terbaik**, terutama untuk jumlah task besar.
 - k kecil hanya membatasi VM yang boleh dipakai tanpa memberi keuntungan, karena VM tercepat selalu sama untuk semua task.
 - Pada beban kecil, perbedaan antar k tidak bisa dijadikan patokan karena dipengaruhi penempatan beberapa task raksasa.

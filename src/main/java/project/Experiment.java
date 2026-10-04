@@ -157,7 +157,7 @@ public final class Experiment {
 			out.println("task_id,length_mi,vm,vm_type,datacenter,host,start_s,finish_s");
 			for (Cloudlet c : setup.cloudlets()) {
 				Vm vm = c.getVm();
-				out.printf(Locale.US, "%d,%d,%d,%s,%d,%d,%.4f,%.4f%n", c.getId(), c.getLength(), vm.getId(),
+				out.printf(Locale.US, "%d,%d,%d,%s,%d,%d,%.4f,%.4f%n", c.getId(), c.getTotalLength(), vm.getId(),
 						vm.getDescription(), vm.getHost().getDatacenter().getId(), vm.getHost().getId(),
 						c.getExecStartTime(), c.getFinishTime());
 			}

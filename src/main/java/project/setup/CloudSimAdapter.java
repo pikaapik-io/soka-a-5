@@ -8,7 +8,7 @@ public final class CloudSimAdapter {
 	private CloudSimAdapter() { }
 
 	public static double[] taskLengths(List<? extends Cloudlet> cloudlets) {
-		return cloudlets.stream().mapToDouble(Cloudlet::getLength).toArray();
+		return cloudlets.stream().mapToDouble(Cloudlet::getTotalLength).toArray();
 	}
 
 	public static double[] vmCapacities(List<? extends Vm> vms) {
