@@ -85,7 +85,9 @@ public final class ScheduleEvaluator {
 		if (!Double.isFinite(w) || w < 0 || w > 1) {
 			throw new IllegalArgumentException("w must be in [0, 1]");
 		}
-		return w * (makespan(mapping) / makespanRef) + (1 - w) * (energyKwh(mapping) / energyRef);
+		double[] loads = vmLoads(mapping);
+		double energyKwh = energyBreakdownFromLoads(loads).totalKwh();
+		return w * (makespanFromLoads(loads) / makespanRef) + (1 - w) * (energyKwh / energyRef);
 	}
 
 	// ── Incremental evaluation: moving one task between VMs, O(1) ────────────

@@ -84,6 +84,11 @@ public final class ScheduleContext {
 		return new ScheduleContext(taskLength, vmCapacity, vmHost, idlePower, maxPower, totalMips);
 	}
 
+	/** Same hosts and VM placement, different tasks/capacities (what Scheduler.schedule() receives). */
+	public ScheduleContext withTasks(double[] newTaskLength, double[] newVmCapacity) {
+		return new ScheduleContext(newTaskLength, newVmCapacity, vmHost, hostIdlePower, hostMaxPower, hostTotalMips);
+	}
+
 	public double[] taskLength() { return taskLength.clone(); }
 	public double[] vmCapacity() { return vmCapacity.clone(); }
 	public int[] vmHost() { return vmHost.clone(); }
