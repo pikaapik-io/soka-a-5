@@ -41,19 +41,21 @@ public final class ConstrainedPlacement {
 	}
 
 	/**
-	 * Plans which datacenter receives each VM using the same rule as findHost
+	 * Plans which host receives each VM using the same rule as findHost
 	 * (datacenters in order, then the host with the fewest PEs in use).
 	 *
 	 * CloudSim Plus 6.6.1 retries a VM that fails in DC-1 on DC-2, but never
 	 * dispatches the cloudlets bound to such a VM. Sending every VM straight to
-	 * its planned datacenter avoids the retry.
+	 * its planned datacenter avoids the retry. {@link #planDatacenters} and
+	 * {@link project.model.ScheduleContext#fromDesign} both build on this, so the
+	 * analytic evaluator sees the exact host placement CloudSim will produce.
 	 */
 	// ★ TUNJUK: hasil akhir fungsi ini yang membuat DC-1 penuh 24/24 PE (4 V3 + 4 V2)
 	// dan DC-2 terisi 16/24 PE (4 V2 + 8 V1), sesuai desain bagian 3.
-	public static Map<Vm, Datacenter> planDatacenters(List<Datacenter> datacenters, List<Vm> vms) {
+	public static Map<Vm, Host> planHosts(List<Datacenter> datacenters, List<Vm> vms) {
 		// Identity map: host IDs repeat across datacenters, so equals() would merge them.
 		Map<Host, long[]> used = new IdentityHashMap<>(); // {PEs, RAM, BW}
-		Map<Vm, Datacenter> plan = new IdentityHashMap<>();
+		Map<Vm, Host> plan = new IdentityHashMap<>();
 		for (Vm vm : vms) {
 			Host chosen = null;
 			for (Datacenter dc : datacenters) {
@@ -62,18 +64,25 @@ public final class ConstrainedPlacement {
 						.min(Comparator.comparingLong(host -> used.get(host)[0]))
 						.orElse(null);
 				if (chosen != null) {
-					plan.put(vm, dc);
 					break;
 				}
 			}
 			if (chosen == null) {
 				throw new IllegalStateException("No host can fit VM " + vm.getId());
 			}
+			plan.put(vm, chosen);
 			long[] u = used.get(chosen);
 			u[0] += vm.getNumberOfPes();
 			u[1] += vm.getRam().getCapacity();
 			u[2] += vm.getBw().getCapacity();
 		}
+		return plan;
+	}
+
+	/** Same plan as {@link #planHosts}, grouped by datacenter instead of host. */
+	public static Map<Vm, Datacenter> planDatacenters(List<Datacenter> datacenters, List<Vm> vms) {
+		Map<Vm, Datacenter> plan = new IdentityHashMap<>();
+		planHosts(datacenters, vms).forEach((vm, host) -> plan.put(vm, host.getDatacenter()));
 		return plan;
 	}
 
