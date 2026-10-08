@@ -18,8 +18,10 @@ import project.model.ScheduleEvaluator;
  */
 public final class HarmonySearchScheduler implements MetaheuristicScheduler {
 	public static final int DEFAULT_HMS = 30;
-	public static final double DEFAULT_HMCR = 0.9;
-	public static final double DEFAULT_PAR = 0.3;
+	// The textbook HMCR=0.9 / PAR=0.3 re-randomizes ~37% of tasks per harmony and never
+	// beat the KPB seed in a sweep (10k evals, GoCJ 100/500/1000); 0.99 / 0.01 did.
+	public static final double DEFAULT_HMCR = 0.99;
+	public static final double DEFAULT_PAR = 0.01;
 	public static final int DEFAULT_MAX_EVALUATIONS = 10_000;
 
 	private final ScheduleContext topology;
