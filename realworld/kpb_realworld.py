@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""KPB (K-Percent Best) Real-World Runner, Kelompok 5.
+"""KPB (K-Percent Best) Real-World Runner
 
 Menjadwalkan task GoCJ ke 20 container Docker dengan KPB, mengeksekusinya secara
 nyata, lalu menghitung delapan metrik Design Project bagian 4.1.
@@ -7,7 +7,8 @@ nyata, lalu menghitung delapan metrik Design Project bagian 4.1.
 Infrastruktur mengikuti desain (lihat docker-compose.yml):
   * 20 VM: V3 4 PE x 2.500 MIPS, V2 2 PE x 1.500, V1 1 PE x 1.000 (1,0 CPU = 10.000 MIPS)
   * 2 datacenter / 6 host sesuai penempatan VM hasil CloudSim
-  * Time-shared: semua task dalam satu VM aktif bersamaan, tiap task maksimal 1 PE
+  * Space-shared: satu VM mengerjakan task berurutan satu per satu (antrean FIFO),
+    satu task yang berjalan memakai penuh kapasitas VM-nya (model CloudletSchedulerSpaceShared)
 
 Logika KPB sama dengan src/main/java/project/scheduler/KpbScheduler.java.
 
@@ -125,11 +126,12 @@ def check_workers():
         except OSError as exc:
             raise SystemExit(f"[ERROR] {vm['name']} ({vm['url']}) tidak merespons: {exc}\n"
                              "        Jalankan dulu: docker compose up -d")
-        if not health.get("stream"):
-            raise SystemExit(f"[ERROR] {vm['name']} masih memakai worker versi lama (tanpa log real-time).\n"
-                             "        Jalankan ulang: docker compose restart")
-        if health.get("pes") != vm["pes"]:
-            raise SystemExit(f"[ERROR] {vm['name']} punya {health.get('pes')} PE, seharusnya {vm['pes']}.\n"
+        if not health.get("sequential"):
+            raise SystemExit(f"[ERROR] {vm['name']} masih memakai worker versi lama (model paralel per-PE, "
+                             "bukan antrean sekuensial).\n"
+                             "        Jalankan ulang: docker compose up -d --force-recreate")
+        if health.get("vm_type") != vm["type"]:
+            raise SystemExit(f"[ERROR] {vm['name']} bertipe {health.get('vm_type')}, seharusnya {vm['type']}.\n"
                              "        Jalankan ulang: docker compose up -d --force-recreate")
 
 
@@ -147,13 +149,13 @@ def check_placement(path):
 
 
 def calibrate(iterations=2_000_000):
-    """Iterasi per detik setara 1,0 CPU, diukur pada 1 PE V3 (0,25 CPU)."""
+    """Iterasi per detik setara 1,0 CPU (REF_MIPS), diukur pada VM V3 (kapasitas = REF_MIPS)."""
     t0 = time.monotonic()
     elapsed = None
     for event in post_stream(VMS[0]["url"] + "/batch", {"tasks": [{"id": 0, "iterations": iterations}]}):
         if "id" in event:
             elapsed = event["finish"] - t0
-    return iterations / elapsed * (REF_MIPS / VMS[0]["mips"])
+    return iterations / elapsed * (REF_MIPS / VMS[0]["capacity"])
 
 
 # ── Eksekusi satu run ─────────────────────────────────────────────────────────
@@ -304,6 +306,8 @@ def main():
     parser.add_argument("--repeat", type=int, default=3, help="jumlah repetisi (default 3)")
     parser.add_argument("--iters-per-mi", type=float, default=DEFAULT_ITERS_PER_MI,
                         help="iterasi CPU per MI (beban tetap, default 14)")
+    parser.add_argument("--scale", type=float, default=None,
+                        help="kunci skala detik-nyata/detik-simulasi (lewati kalibrasi otomatis)")
     parser.add_argument("--limit", type=int, default=0, help="hanya pakai N task pertama")
     parser.add_argument("--out", default="results")
     parser.add_argument("--placement", default="../results/simulation/placement.csv")
@@ -321,8 +325,13 @@ def main():
 
     check_workers()
     placement_note = check_placement(args.placement)
-    rate = calibrate()
-    scale = args.iters_per_mi * REF_MIPS / rate  # 1 detik simulasi = scale detik nyata
+    if args.scale is not None:
+        scale = args.scale  # 1 detik simulasi = scale detik nyata (dikunci lewat CLI)
+        scale_note = "locked"
+    else:
+        rate = calibrate()
+        scale = args.iters_per_mi * REF_MIPS / rate  # 1 detik simulasi = scale detik nyata
+        scale_note = "calibrated"
     predicted = analytic_makespan(lengths, kpb_schedule(lengths, capacities, args.k)) * scale
 
     dataset_name = os.path.splitext(os.path.basename(args.dataset))[0]
@@ -330,7 +339,7 @@ def main():
     os.makedirs(args.out, exist_ok=True)
     print(f"scheduler=KPB(k={args.k}%) realworld, {placement_note}")
     print(f"dataset={args.dataset} tasks={len(lengths)} subset={subset_size(args.k, len(VMS))} "
-          f"repeat={args.repeat} itersPerMI={args.iters_per_mi:g} scale={scale:.4f}")
+          f"repeat={args.repeat} itersPerMI={args.iters_per_mi:g} scale={scale:.4f} ({scale_note})")
 
     runs = []
     for run in range(1, args.repeat + 1):
@@ -345,7 +354,9 @@ def main():
         m["scheduling_ms"] = sched_ms
         runs.append(m)
 
-        print(f"  makespan={m['makespan_s']:.3f}s, energy={m['energy_kwh']:.6f} kWh, "
+        ratio = m['makespan_s'] / predicted if predicted > 0 else float('nan')
+        print(f"  makespan={m['makespan_s']:.3f}s (nyata/prediksi={ratio:.3f}x), "
+              f"energy={m['energy_kwh']:.6f} kWh, "
               f"avgResponse={m['avg_response_s']:.3f}s, utilization={m['utilization_pct']:.2f}%, "
               f"DI={m['di_all_vm']:.4f} (VM terpakai {m['di_used_vm']:.4f}), "
               f"throughput={m['throughput_task_s']:.3f} task/s, cost=${m['cost_usd']:.2f}, "
