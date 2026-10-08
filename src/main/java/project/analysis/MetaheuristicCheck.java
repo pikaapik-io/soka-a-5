@@ -13,6 +13,7 @@ import project.metrics.MetricsCollector;
 import project.metrics.Result;
 import project.model.ScheduleContext;
 import project.model.ScheduleEvaluator;
+import project.scheduler.ClonalSelectionScheduler;
 import project.scheduler.HarmonySearchScheduler;
 import project.scheduler.KpbScheduler;
 import project.scheduler.MetaheuristicScheduler;
@@ -26,7 +27,7 @@ import project.setup.VmFactory;
  * results/analysis/.
  *
  * Usage: MetaheuristicCheck algo [dataset1,dataset2,...] [seed1,seed2,...] [maxEvaluations]
- *        algo = hs
+ *        algo = hs | csa
  */
 public final class MetaheuristicCheck {
 	private static final Path OUTPUT_DIR = Path.of("results", "analysis");
@@ -93,6 +94,8 @@ public final class MetaheuristicCheck {
 		switch (algo) {
 			case "hs":
 				return new HarmonySearchScheduler(topology, maxEvaluations, seed);
+			case "csa":
+				return new ClonalSelectionScheduler(topology, maxEvaluations, seed);
 			default:
 				throw new IllegalArgumentException("Unknown algorithm: " + algo);
 		}
