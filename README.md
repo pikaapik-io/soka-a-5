@@ -260,7 +260,7 @@ KPB hanya melihat panjang task dan kapasitas VM (rumus f1 desain) untuk mengambi
 | [`CloudSimAdapter.java`](src/main/java/project/setup/CloudSimAdapter.java) | Mengubah VM CloudSim menjadi array kapasitas untuk scheduler |
 | [`EnergyMeter.java`](src/main/java/project/metrics/EnergyMeter.java) | Integrasi `P(u)` semua host dari 0 sampai makespan |
 | [`MetricsCollector.java`](src/main/java/project/metrics/MetricsCollector.java) | Menghitung 8 metrik desain dari hasil CloudSim |
-| [`EtcMatrix.java`](src/main/java/project/model/EtcMatrix.java), [`FitnessEvaluator.java`](src/main/java/project/model/FitnessEvaluator.java) | Model analitik f1 (pembanding) |
+| [`ScheduleEvaluator.java`](src/main/java/project/model/ScheduleEvaluator.java), [`ScheduleContext.java`](src/main/java/project/model/ScheduleContext.java) | Model analitik f1 (makespan) dan energi, dipakai bersama KPB/HS/CSA |
 
 ### 4.3 Pemetaan Langkah KPB ke Kode
 
@@ -405,7 +405,7 @@ flowchart LR
 |:---|:---|:---|
 | 20 "VM" | [`realworld/docker-compose.yml`](realworld/docker-compose.yml) | Container `python:3.12-slim`. Batas CPU, jumlah PE, RAM, jaringan DC, dan label host sesuai desain |
 | Worker | [`realworld/worker/worker.py`](realworld/worker/worker.py) | Server HTTP di tiap container dengan `PES` proses PE yang meniru `CloudletSchedulerTimeShared` |
-| Scheduler | [`realworld/kpb_realworld.py`](realworld/kpb_realworld.py) | Port KPB dari `KpbScheduler.java`, eksekusi, 8 metrik desain, repetisi, ekspor CSV |
+| Runner | [`realworld/kpb_realworld.py`](realworld/kpb_realworld.py) | Mengambil mapping dari kode Java yang sama dengan simulasi (KPB / HS / CSA), mengeksekusinya, 8 metrik desain, repetisi, ekspor CSV |
 
 ### 7.2 Pemetaan Simulasi → Real World
 
@@ -428,7 +428,7 @@ Tiga hal yang membuat eksekusinya nyata, bukan sekadar meniru durasi:
 
 1. **Beban berbasis jumlah kerja.** Worker tidak diberi tahu berapa lama harus berjalan. Jumlah iterasi task sama di container mana pun, dan perbedaan waktu berasal dari batas CPU kernel (CFS, `cpu_quota` dengan periode 10 ms) serta batas per PE.
 2. **Batas 1 PE per task pada worker Docker.** Satu task dijalankan oleh satu proses PE; V3 dapat mengerjakan hingga empat task berbeda bersamaan, tetapi satu task tidak memakai keempat PE. Ini berbeda dari CloudSim terbaru, yang memberi satu Cloudlet semua PE VM tujuannya.
-3. **Mapping identik dengan simulasi.** `kpb_schedule()` di Python menghasilkan mapping yang sama persis dengan `KpbScheduler.java` (diverifikasi untuk S1 k=20%, S2 k=50%, S3 k=100%, dan S3 k=20%).
+3. **Mapping identik dengan simulasi.** Algoritma tidak ditulis ulang di Python: `kpb_realworld.py` memanggil `project.Experiment --no-sim --export-mapping` (atau membaca JSON hasil ekspor lewat `--mapping`), jadi mapping real-world selalu berasal dari kode Java yang sama dengan CloudSim.
 
 ### 7.3 Cara Menjalankan
 
@@ -528,12 +528,12 @@ python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_10
 Seluruh 9 kombinasi × 3 repetisi, sama seperti tabel 7.4 (±30 menit). `--quiet` dipakai supaya log tidak berisi ribuan baris per cloudlet:
 
 ```bash
-rm -rf results && mkdir results    # opsional: summary.csv dan aggregate.csv bersifat append
-
+SESSION=results/sessions/kpb_$(date +%Y%m%d_%H%M%S)    # satu folder baru per sesi, hasil lama tidak disentuh
+mkdir -p $SESSION
 for n in 100 500 1000; do for k in 20 50 100; do
   echo "== GoCJ $n task, k = $k% =="
   python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_$n.txt --k $k --repeat 3 --quiet \
-    | tee results/log_GoCJ_Dataset_${n}_k$k.txt
+    --out $SESSION | tee $SESSION/log_GoCJ_Dataset_${n}_k$k.txt
 done; done
 ```
 
@@ -552,35 +552,28 @@ Saat semua VM sibuk, kolom `CPU %` akan menunjukkan sekitar 100% untuk V3 (vm00�
 #### Langkah 7: Lihat hasil
 
 ```bash
-column -s, -t results/aggregate.csv | less -S    # mean ± std per konfigurasi
-column -s, -t results/summary.csv | less -S      # satu baris per run
+column -s, -t $SESSION/aggregate.csv | less -S    # mean ± std per konfigurasi
+column -s, -t $SESSION/summary.csv | less -S      # satu baris per run
 ```
 
 | File | Isi |
 |:---|:---|
-| `results/aggregate.csv` | Satu baris per konfigurasi: mean dan std 8 metrik |
-| `results/summary.csv` | Satu baris per run: 8 metrik, skala, prediksi analitik |
-| `results/tasks_<dataset>_n<N>_k<K>_run<R>.csv` | Per task: VM, tipe, DC, host, waktu selesai |
-| `results/log_<dataset>_k<K>.txt` | Salinan output terminal (bila memakai loop di atas) |
+| `aggregate.csv` | Satu baris per konfigurasi: mean dan std 8 metrik, plus `algo`, `seed` |
+| `summary.csv` | Satu baris per run: 8 metrik, skala, prediksi analitik, plus `algo`, `seed`, `evaluations`, `fitness` |
+| `tasks_<dataset>_n<N>_k<K>_run<R>.csv` | Per task (KPB): VM, tipe, DC, host, waktu selesai. HS/CSA: `..._<algo>_seed<S>_run<R>.csv` |
+| `mapping_<dataset>.json` | Mapping yang dieksekusi, hasil ekspor Java |
+| `log_<dataset>_k<K>.txt` | Salinan output terminal (bila memakai loop di atas) |
 
-#### Langkah 8: Bandingkan mapping dengan simulasi
+Semua file di atas ada di folder sesi (`--out`, default `results/sessions/<algo>_<timestamp>/`). Hasil lama di `results/*.csv` tidak pernah ditimpa.
 
-`kpb_schedule()` di Python memakai logika yang sama dengan `KpbScheduler.java`. Untuk membuktikannya, bandingkan mapping Python dengan VM tempat setiap cloudlet berjalan di CloudSim (`results/simulation/cloudlets_<dataset>_k<K>.csv`, hasil bagian 8):
+#### Langkah 8: Mapping sama dengan simulasi
+
+Mapping dihitung oleh `project.Experiment` (Java), kode yang sama dengan simulasi CloudSim, lalu disimpan di `mapping_<dataset>.json` di folder sesi. Python hanya mengeksekusinya, sehingga mapping simulasi dan real-world identik secara konstruksi. Untuk memakai mapping yang sama persis di beberapa sesi, ekspor sekali lalu berikan lewat `--mapping`:
 
 ```bash
-for k in 20 50 100; do python3 -c "
-import csv, kpb_realworld as r
-L = r.load_gocj('../src/main/resources/dataset/GoCJ_Dataset_100.txt')
-py = r.kpb_schedule(L, [v['capacity'] for v in r.VMS], $k)
-java = [int(row['vm']) for row in csv.DictReader(open('../results/simulation/cloudlets_GoCJ_Dataset_100_k$k.csv'))]
-print('k=$k%:', 'IDENTIK' if py == java else 'BEDA', '-', sum(a == b for a, b in zip(py, java)), '/', len(java), 'task sama')
-"; done
-```
-
-```text
-k=20%: IDENTIK - 100 / 100 task sama
-k=50%: IDENTIK - 100 / 100 task sama
-k=100%: IDENTIK - 100 / 100 task sama
+# dari root repo
+mvn -q compile exec:java -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_500.txt --algo csa --seed 1 --no-sim --export-mapping realworld/csa_500_seed1.json"
+cd realworld && python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_500.txt --mapping csa_500_seed1.json
 ```
 
 #### Langkah 9: Matikan container
@@ -594,8 +587,9 @@ docker compose down
 | Masalah | Penyebab / solusi |
 |:---|:---|
 | `[ERROR] vm00 (http://127.0.0.1:9100) tidak merespons` | Container belum jalan. Lakukan langkah 3–4, tunggu beberapa detik, lalu ulangi |
-| `[ERROR] vm00 masih memakai worker versi lama (tanpa log real-time)` | Container belum memuat `worker.py` terbaru. Jalankan `docker compose restart` |
-| `[ERROR] vm00 punya None PE, seharusnya 4` | Container masih versi lama. Jalankan `docker compose up -d --force-recreate` |
+| `[ERROR] vm00 masih memakai worker versi lama (model paralel per-PE, ...)` | Container belum memuat `worker.py` sekuensial. Jalankan `docker compose up -d --force-recreate` |
+| `[ERROR] Penjadwalan Java gagal` | `mvn`/JDK tidak ada di PATH, atau kode Java gagal dikompilasi. Coba `mvn -q compile` dari root repo |
+| `[ERROR] .../summary.csv punya kolom berbeda` | Folder `--out` berisi CSV format lama. Pakai folder sesi baru |
 | `[ERROR] Penempatan vmXX beda dengan CloudSim` | Konfigurasi simulasi berubah. Samakan `PLACEMENT` di `kpb_realworld.py` dengan `results/simulation/placement.csv` |
 | `Cannot connect to the Docker daemon` | Docker belum dinyalakan (lihat langkah 1) |
 | `port is already allocated` (9100–9119) | Port dipakai program lain. Matikan program itu, atau ganti port di `docker-compose.yml` dan `kpb_realworld.py` |
@@ -606,11 +600,17 @@ docker compose down
 | Argumen | Default | Arti |
 |:---|:---:|:---|
 | `--dataset` | GoCJ 100 | File dataset GoCJ |
+| `--algo` | `kpb` | `kpb`, `hs`, atau `csa` (mapping dihitung oleh Java) |
 | `--k` | 20 | Persen VM kandidat KPB |
+| `--seed`, `--evals`, `--w` | 1, 10000, 0.5 | Seed, budget evaluasi, dan bobot fitness HS/CSA |
+| `--hms --hmcr --par` | 30, 0.99, 0.01 | Parameter HS |
+| `--pop --nselect --beta --mut-min --mut-max --d` | 30, 10, 1.0, 0.01, 0.10, 3 | Parameter CSA |
+| `--mapping` | — | Pakai JSON mapping yang sudah diekspor Java (opsi algoritma diabaikan) |
 | `--repeat` | 3 | Jumlah repetisi (mean ± std dihitung otomatis) |
 | `--iters-per-mi` | 14 | Iterasi CPU per MI (beban per task) |
+| `--scale` | kalibrasi | Kunci skala detik-nyata/detik-simulasi |
 | `--limit` | 0 (semua) | Hanya pakai N task pertama |
-| `--out` | `results` | Folder output CSV |
+| `--out` | `results/sessions/<algo>_<timestamp>` | Folder sesi |
 | `--placement` | `../results/simulation/placement.csv` | File penempatan CloudSim untuk verifikasi |
 | `--quiet` | mati | Sembunyikan log broker real-time per cloudlet |
 
@@ -775,6 +775,20 @@ for n in 100 500 1000; do for k in 20 50 100; do
 done; done
 ```
 
+#### KPB, Harmony Search, dan Clonal Selection (mode flag)
+
+Begitu ada argumen yang diawali `--`, setiap run ditulis ke folder sesi baru (`--out`, default `results/sessions/<timestamp>/`), bukan ke `results/simulation/`. Daftar opsi lengkap: `mvn -q exec:java -Dexec.args="--help"`.
+
+```bash
+mvn -q exec:java -Dlog=error -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_500.txt --algo csa --seed 1 --evals 10000"
+mvn -q exec:java -Dlog=error -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_500.txt --algo hs --seed 1 --hmcr 0.99 --par 0.01"
+
+# Eksperimen lengkap: KPB k=100% vs HS vs CSA (seed 1-5) pada GoCJ 100/500/1000, lalu rekap mean ± std
+bash scripts/run_cloudsim_experiment.sh
+```
+
+Selain metrik di bawah, mode flag mencetak `algo=..., seed=..., evaluations=..., fitness=..., schedulingTime=...`. `fitness` = 0,5 × makespan/makespan KPB k=100% + 0,5 × energi/energi KPB k=100% (lebih kecil lebih baik; KPB k=100% = 1,0). Folder sesi berisi `summary.csv` (kolom lama + `algo, seed, evaluations, fitness`), `cloudlets_*.csv`, `convergence_*.csv` (HS/CSA), `mapping_*.json`, `placement.csv`, dan `recap.md`/`recap.csv` dari `scripts/summarize_session.py`.
+
 ### Langkah 3: Membaca output
 
 Output terdiri dari dua bagian. Bagian pertama adalah **log CloudSim Plus**: datacenter dinyalakan, VM dibuat dan ditempatkan di host, cloudlet dikirim ke VM hasil KPB, lalu cloudlet selesai.
@@ -877,8 +891,9 @@ soka-a-5/
 │   │   ├── data/
 │   │   │   └── GoCJLoader.java            ← Loader dataset GoCJ
 │   │   ├── model/
-│   │   │   ├── EtcMatrix.java             ← Matriks ETC
-│   │   │   └── FitnessEvaluator.java      ← Model analitik f1
+│   │   │   ├── ScheduleContext.java       ← Topologi host + task
+│   │   │   ├── ScheduleEvaluator.java     ← Model analitik f1 + energi
+│   │   │   └── FitnessFunction.java       ← Fitness HS/CSA
 │   │   ├── metrics/
 │   │   │   ├── MetricsCollector.java      ← 8 metrik desain
 │   │   │   ├── EnergyMeter.java           ← Integrasi daya host (kWh)

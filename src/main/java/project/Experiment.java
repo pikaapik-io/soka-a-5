@@ -1,6 +1,7 @@
 package project;
 
 import ch.qos.logback.classic.Level;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -9,8 +10,10 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.cloudbus.cloudsim.cloudlets.Cloudlet;
 import org.cloudbus.cloudsim.datacenters.Datacenter;
@@ -23,8 +26,11 @@ import org.slf4j.LoggerFactory;
 import project.data.GoCJLoader;
 import project.metrics.MetricsCollector;
 import project.metrics.Result;
-import project.model.FitnessEvaluator;
+import project.model.FitnessFunction;
+import project.model.ScheduleContext;
+import project.model.ScheduleEvaluator;
 import project.scheduler.KpbScheduler;
+import project.scheduler.MetaheuristicScheduler;
 import project.scheduler.Scheduler;
 import project.setup.CloudSimAdapter;
 import project.setup.DatacenterFactory;
@@ -32,12 +38,15 @@ import project.setup.SimulationSetup;
 import project.setup.VmFactory;
 
 /**
- * Runs KPB on the CloudSim Plus scenario of the project design.
- *
- * Usage: Experiment [dataset] [k_percent]   (-Dlog=error hides the CloudSim log)
+ * Runs KPB, Harmony Search or Clonal Selection on the CloudSim Plus scenario of
+ * the project design. See {@link RunOptions#USAGE} (-Dlog=error hides the CloudSim log).
  */
 public final class Experiment {
-	private static final Path OUTPUT_DIR = Path.of("results", "simulation");
+	private static final Path LEGACY_OUTPUT_DIR = Path.of("results", "simulation");
+	private static final String SUMMARY_HEADER = "timestamp,dataset,tasks,k_percent,makespan_s,"
+			+ "analytic_makespan_s,energy_kwh,avg_response_s,utilization_pct,di_all_vm,di_used_vm,"
+			+ "throughput_task_s,cost_usd,scheduling_ms";
+	private static final String SESSION_SUMMARY_HEADER = SUMMARY_HEADER + ",algo,seed,evaluations,fitness";
 
 	private Experiment() { }
 
@@ -46,26 +55,51 @@ public final class Experiment {
 		Log.setLevel(Level.toLevel(System.getProperty("log", "info"), Level.INFO));
 		// RAM/BW contention warnings are logged per cloudlet every tick and would flood the output.
 		Log.setLevel(LoggerFactory.getLogger(CloudletScheduler.class.getSimpleName()), Level.ERROR);
-		Path dataset = args.length == 0 ? null : Path.of(args[0]);
-		double[] taskLengths = dataset == null
+		RunOptions options = RunOptions.parse(args);
+		if (options.help) {
+			System.out.println(RunOptions.USAGE);
+			return;
+		}
+		double[] taskLengths = options.dataset == null
 				? new double[] {900_000, 600_000, 450_000, 300_000, 150_000}
-				: GoCJLoader.load(dataset);
-		double kPercent = args.length > 1
-				? Double.parseDouble(args[1])
-				: KpbScheduler.DEFAULT_K_PERCENT;
+				: GoCJLoader.load(options.dataset);
+		String datasetName = options.dataset == null ? "example"
+				: options.dataset.getFileName().toString().replaceFirst("\\.txt$", "");
 
 		// The scheduler only sees task lengths and VM capacities (MIPS x PE).
 		double[] vmCapacities = CloudSimAdapter.vmCapacities(VmFactory.createDefaultVms());
-		Scheduler scheduler = new KpbScheduler(kPercent);
-		scheduler.schedule(taskLengths, vmCapacities); // JIT warm-up for metric 8
+		ScheduleContext topology = ScheduleContext.fromDesign(new double[0]);
+		Scheduler scheduler = options.createScheduler(topology);
+		if (scheduler instanceof KpbScheduler) {
+			scheduler.schedule(taskLengths, vmCapacities); // JIT warm-up for metric 8
+		}
 		long start = System.nanoTime();
 		int[] mapping = scheduler.schedule(taskLengths, vmCapacities);
 		double schedulingMillis = (System.nanoTime() - start) / 1e6;
 
+		ScheduleEvaluator evaluator = new ScheduleEvaluator(topology.withTasks(taskLengths, vmCapacities));
+		int[] reference = new KpbScheduler(100).schedule(taskLengths, vmCapacities);
+		RunInfo info = new RunInfo(options, scheduler, datasetName, taskLengths.length, schedulingMillis,
+				new FitnessFunction(evaluator, options.w, reference).evaluate(mapping),
+				evaluator.makespan(mapping), evaluator.energyKwh(mapping));
+
+		if (options.exportMapping != null) {
+			writeMappingJson(options.exportMapping, info, vmCapacities, mapping);
+		} else if (!options.legacy) {
+			writeMappingJson(options.out.resolve("mapping_" + options.tag(datasetName) + ".json"),
+					info, vmCapacities, mapping);
+		}
+		if (options.noSim) {
+			System.out.printf(Locale.US, "scheduler=%s%n", scheduler.getName());
+			System.out.printf(Locale.US, "analitik: makespan=%.3f s, energy=%.6f kWh%n",
+					info.analyticMakespan, info.analyticEnergyKwh);
+			System.out.println(info.line());
+			return;
+		}
+
 		SimulationSetup setup = new SimulationSetup(taskLengths);
 		setup.run(mapping);
 		Result result = MetricsCollector.collect(scheduler.getName(), setup, schedulingMillis);
-		double analyticMakespan = new FitnessEvaluator(taskLengths, vmCapacities).makespan(mapping);
 
 		printInfrastructure(setup);
 		System.out.printf(Locale.US, "scheduler=%s%n", result.scheduler());
@@ -73,19 +107,103 @@ public final class Experiment {
 				result.tasks(), setup.broker().getVmCreatedList().size(), setup.vmList().size(),
 				setup.cloudlets().stream().filter(Cloudlet::isFinished).count(), result.tasks());
 		System.out.printf(Locale.US, "makespan=%.3f s (analitik %.3f s), energy=%.4f kWh, avgResponse=%.3f s%n",
-				result.makespan(), analyticMakespan, result.energyKwh(), result.averageResponse());
+				result.makespan(), info.analyticMakespan, result.energyKwh(), result.averageResponse());
 		System.out.printf(Locale.US, "utilization=%.2f%%, DI=%.4f (VM terpakai %.4f), throughput=%.4f task/s%n",
 				result.utilizationPercent(), result.degreeOfImbalance(),
 				result.degreeOfImbalanceUsedVms(), result.throughput());
 		System.out.printf(Locale.US, "cost=$%.2f, schedulingTime=%.3f ms%n",
 				result.totalCost(), result.schedulingMillis());
+		System.out.println(info.line());
 		System.out.println("mapping=" + Arrays.toString(mapping));
 		System.out.println("vmFinish=" + Arrays.toString(round(result.vmFinishTimes())));
 
-		if (dataset != null) {
-			String name = dataset.getFileName().toString().replaceFirst("\\.txt$", "");
-			writeCsv(name, kPercent, result, analyticMakespan, setup);
+		if (options.legacy) {
+			if (options.dataset != null) {
+				writeCsv(LEGACY_OUTPUT_DIR, SUMMARY_HEADER, summaryRow(datasetName,
+								String.format(Locale.US, "%.1f", options.kPercent), result, info.analyticMakespan), setup,
+						String.format(Locale.US, "cloudlets_%s_k%s.csv", datasetName,
+								new java.text.DecimalFormat("0.##").format(options.kPercent)));
+			}
+		} else {
+			String kColumn = "kpb".equals(options.algo) ? String.format(Locale.US, "%.1f", options.kPercent) : "";
+			String row = summaryRow(datasetName, kColumn, result, info.analyticMakespan)
+					+ String.format(Locale.US, ",%s,%s,%d,%.8f", options.algo, info.seedText(),
+					info.evaluations, info.fitness);
+			writeCsv(options.out, SESSION_SUMMARY_HEADER, row, setup, "cloudlets_" + options.tag(datasetName) + ".csv");
+			if (scheduler instanceof MetaheuristicScheduler) {
+				((MetaheuristicScheduler) scheduler).convergence().writeCsv(
+						options.out.resolve("convergence_" + options.tag(datasetName) + ".csv"));
+			}
+			System.out.println("hasil -> " + options.out);
 		}
+	}
+
+	/** What a run reports besides the CloudSim metrics; also the content of the mapping JSON. */
+	private static final class RunInfo {
+		final String algo;
+		final String scheduler;
+		final String dataset;
+		final int tasks;
+		final Double kPercent;
+		final Long seed;
+		final Integer maxEvaluations;
+		final long evaluations;
+		final double w;
+		final double schedulingMillis;
+		final double fitness;
+		final double analyticMakespan;
+		final double analyticEnergyKwh;
+
+		RunInfo(RunOptions o, Scheduler s, String dataset, int tasks, double schedulingMillis, double fitness,
+				double analyticMakespan, double analyticEnergyKwh) {
+			MetaheuristicScheduler m = s instanceof MetaheuristicScheduler ? (MetaheuristicScheduler) s : null;
+			this.algo = o.algo;
+			this.scheduler = s.getName();
+			this.dataset = dataset;
+			this.tasks = tasks;
+			this.kPercent = m == null ? o.kPercent : null;
+			this.seed = m == null ? null : m.seed();
+			this.maxEvaluations = m == null ? null : m.maxEvaluations();
+			this.evaluations = m == null ? 0 : m.evaluations();
+			this.w = o.w;
+			this.schedulingMillis = schedulingMillis;
+			this.fitness = fitness;
+			this.analyticMakespan = analyticMakespan;
+			this.analyticEnergyKwh = analyticEnergyKwh;
+		}
+
+		String seedText() {
+			return seed == null ? "" : seed.toString();
+		}
+
+		String line() {
+			return String.format(Locale.US, "algo=%s, seed=%s, evaluations=%d, fitness=%.6f, schedulingTime=%.3f ms",
+					algo, seed == null ? "-" : seed.toString(), evaluations, fitness, schedulingMillis);
+		}
+	}
+
+	private static void writeMappingJson(Path path, RunInfo info, double[] vmCapacities, int[] mapping)
+			throws IOException {
+		Map<String, Object> json = new LinkedHashMap<>();
+		json.put("algo", info.algo);
+		json.put("scheduler", info.scheduler);
+		json.put("dataset", info.dataset);
+		json.put("tasks", info.tasks);
+		json.put("k_percent", info.kPercent);
+		json.put("seed", info.seed);
+		json.put("max_evaluations", info.maxEvaluations);
+		json.put("evaluations", info.evaluations);
+		json.put("w", info.w);
+		json.put("fitness", info.fitness);
+		json.put("analytic_makespan_s", info.analyticMakespan);
+		json.put("analytic_energy_kwh", info.analyticEnergyKwh);
+		json.put("scheduling_ms", info.schedulingMillis);
+		json.put("vm_capacity", vmCapacities);
+		json.put("mapping", mapping);
+		if (path.getParent() != null) {
+			Files.createDirectories(path.getParent());
+		}
+		new ObjectMapper().writeValue(path.toFile(), json);
 	}
 
 	/** Datacenter, host and VM specs read back from the CloudSim objects, to compare with the design. */
@@ -124,25 +242,32 @@ public final class Experiment {
 		return Arrays.stream(values).map(v -> Math.round(v * 100) / 100.0).toArray();
 	}
 
-	private static void writeCsv(String dataset, double kPercent, Result r, double analyticMakespan,
-								 SimulationSetup setup) throws IOException {
-		Files.createDirectories(OUTPUT_DIR);
-		Path summary = OUTPUT_DIR.resolve("summary.csv");
-		boolean newFile = !Files.exists(summary);
-		try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(summary,
-				StandardOpenOption.CREATE, StandardOpenOption.APPEND))) {
-			if (newFile) {
-				out.println("timestamp,dataset,tasks,k_percent,makespan_s,analytic_makespan_s,energy_kwh,"
-						+ "avg_response_s,utilization_pct,di_all_vm,di_used_vm,throughput_task_s,cost_usd,scheduling_ms");
-			}
-			out.printf(Locale.US, "%s,%s,%d,%.1f,%.4f,%.4f,%.6f,%.4f,%.2f,%.4f,%.4f,%.4f,%.4f,%.3f%n",
-					LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), dataset, r.tasks(), kPercent,
-					r.makespan(), analyticMakespan, r.energyKwh(), r.averageResponse(),
-					r.utilizationPercent(), r.degreeOfImbalance(), r.degreeOfImbalanceUsedVms(),
-					r.throughput(), r.totalCost(), r.schedulingMillis());
-		}
+	private static String summaryRow(String dataset, String kPercent, Result r, double analyticMakespan) {
+		return String.format(Locale.US, "%s,%s,%d,%s,%.4f,%.4f,%.6f,%.4f,%.2f,%.4f,%.4f,%.4f,%.4f,%.3f",
+				LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS), dataset, r.tasks(), kPercent,
+				r.makespan(), analyticMakespan, r.energyKwh(), r.averageResponse(),
+				r.utilizationPercent(), r.degreeOfImbalance(), r.degreeOfImbalanceUsedVms(),
+				r.throughput(), r.totalCost(), r.schedulingMillis());
+	}
 
-		try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(OUTPUT_DIR.resolve("placement.csv")))) {
+	private static void writeCsv(Path dir, String header, String row, SimulationSetup setup, String detailName)
+			throws IOException {
+		Files.createDirectories(dir);
+		Path summary = dir.resolve("summary.csv");
+		if (Files.exists(summary)) {
+			String existing;
+			try (java.io.BufferedReader reader = Files.newBufferedReader(summary)) {
+				existing = reader.readLine();
+			}
+			if (!header.equals(existing)) {
+				throw new IllegalStateException(summary + " has a different header; use a new --out folder");
+			}
+		} else {
+			Files.writeString(summary, header + System.lineSeparator());
+		}
+		Files.writeString(summary, row + System.lineSeparator(), StandardOpenOption.APPEND);
+
+		try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(dir.resolve("placement.csv")))) {
 			out.println("vm,vm_type,pes,mips_per_pe,ram_mb,bw_mbps,datacenter,host");
 			for (Vm vm : setup.vmList()) {
 				out.printf(Locale.US, "%d,%s,%d,%.0f,%d,%d,%d,%d%n", vm.getId(), vm.getDescription(),
@@ -151,9 +276,7 @@ public final class Experiment {
 			}
 		}
 
-		Path detail = OUTPUT_DIR.resolve(String.format(Locale.US, "cloudlets_%s_k%s.csv",
-				dataset, new java.text.DecimalFormat("0.##").format(kPercent)));
-		try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(detail))) {
+		try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(dir.resolve(detailName)))) {
 			out.println("task_id,length_mi,vm,vm_type,datacenter,host,start_s,finish_s");
 			for (Cloudlet c : setup.cloudlets()) {
 				Vm vm = c.getVm();

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""KPB (K-Percent Best) Real-World Runner
+"""Real-World Runner (KPB / Harmony Search / Clonal Selection)
 
-Menjadwalkan task GoCJ ke 20 container Docker dengan KPB, mengeksekusinya secara
-nyata, lalu menghitung delapan metrik Design Project bagian 4.1.
+Menjadwalkan task GoCJ ke 20 container Docker, mengeksekusinya secara nyata, lalu
+menghitung delapan metrik Design Project bagian 4.1.
 
 Infrastruktur mengikuti desain (lihat docker-compose.yml):
   * 20 VM: V3 4 PE x 2.500 MIPS, V2 2 PE x 1.500, V1 1 PE x 1.000 (1,0 CPU = 10.000 MIPS)
@@ -10,24 +10,30 @@ Infrastruktur mengikuti desain (lihat docker-compose.yml):
   * Space-shared: satu VM mengerjakan task berurutan satu per satu (antrean FIFO),
     satu task yang berjalan memakai penuh kapasitas VM-nya (model CloudletSchedulerSpaceShared)
 
-Logika KPB sama dengan src/main/java/project/scheduler/KpbScheduler.java.
+Algoritma TIDAK diimplementasi ulang di sini: mapping dihitung oleh kode Java yang
+sama dengan simulasi (project.Experiment --no-sim --export-mapping), lalu runner ini
+hanya mengeksekusinya. Mapping bisa juga dibaca dari JSON yang sudah diekspor (--mapping).
 
 Contoh:
   python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_100.txt --k 20 --repeat 3
+  python3 kpb_realworld.py --dataset ... --algo csa --seed 1 --evals 10000
+  python3 kpb_realworld.py --dataset ... --mapping mapping.json   (pakai mapping yang sudah diekspor)
   python3 kpb_realworld.py ... --quiet     (tanpa log broker per cloudlet)
 """
 
 import argparse
 import csv
 import json
-import math
 import os
 import re
 import statistics
+import subprocess
 import threading
 import time
 import urllib.request
 from datetime import datetime
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 REF_MIPS = 10_000          # 1,0 CPU container = 10.000 MIPS
 DEFAULT_ITERS_PER_MI = 14  # beban tetap: L x 14 iterasi CPU
@@ -76,29 +82,45 @@ def load_gocj(path):
     return lengths
 
 
-# ── KPB ───────────────────────────────────────────────────────────────────────
+# ── Penjadwalan (Java, implementasi yang sama dengan simulasi) ────────────────
 
-def subset_size(k_percent, vm_count):
-    return max(1, min(vm_count, math.ceil(k_percent / 100.0 * vm_count)))
+# Opsi algoritma yang diteruskan apa adanya ke project.Experiment (lihat RunOptions.java).
+JAVA_OPTIONS = ["k", "seed", "evals", "w", "hms", "hmcr", "par", "pop", "nselect", "beta",
+                "mut_min", "mut_max", "d"]
 
 
-def kpb_schedule(lengths, capacities, k_percent):
-    s = subset_size(k_percent, len(capacities))
-    ready = [0.0] * len(capacities)
-    mapping = []
-    for length in lengths:  # Langkah 1: urutan kedatangan
-        # Langkah 2: ranking VM berdasarkan waktu eksekusi, ambil s teratas
-        ranked = sorted(range(len(capacities)), key=lambda j: (length / capacities[j], j))
-        # Langkah 3: completion time terkecil di dalam subset
-        best, best_finish = ranked[0], math.inf
-        for j in ranked[:s]:
-            finish = ready[j] + length / capacities[j]
-            if finish < best_finish:
-                best, best_finish = j, finish
-        # Langkah 4: commit
-        mapping.append(best)
-        ready[best] = best_finish
-    return mapping
+def java_schedule(args, dataset_path, json_path):
+    """Jalankan project.Experiment --no-sim untuk mengekspor mapping ke json_path."""
+    java_args = ["--dataset", os.path.abspath(dataset_path), "--algo", args.algo,
+                 "--no-sim", "--export-mapping", os.path.abspath(json_path)]
+    for name in JAVA_OPTIONS:
+        value = getattr(args, name)
+        if value is not None:
+            java_args += ["--" + name.replace("_", "-"), str(value)]
+    if any(re.search(r"\s", a) for a in java_args):
+        raise SystemExit("[ERROR] Path dengan spasi tidak didukung oleh -Dexec.args Maven")
+    cmd = ["mvn", "-q", "-f", os.path.join(REPO_ROOT, "pom.xml"), "compile", "exec:java",
+           "-Dexec.mainClass=project.Experiment", "-Dlog=error", "-Dexec.args=" + " ".join(java_args)]
+    proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+    if proc.returncode != 0 or not os.path.exists(json_path):
+        raise SystemExit("[ERROR] Penjadwalan Java gagal:\n" + proc.stdout[-2000:] + proc.stderr[-2000:])
+    return load_mapping(json_path)
+
+
+def load_mapping(path):
+    with open(path) as f:
+        return json.load(f)
+
+
+def check_mapping(schedule, lengths):
+    """Mapping harus cocok dengan dataset dan infrastruktur runner ini."""
+    mapping = schedule["mapping"]
+    if schedule["tasks"] != len(lengths) or len(mapping) != len(lengths):
+        raise SystemExit(f"[ERROR] Mapping untuk {schedule['tasks']} task, dataset punya {len(lengths)} task")
+    if [float(c) for c in schedule["vm_capacity"]] != [float(vm["capacity"]) for vm in VMS]:
+        raise SystemExit("[ERROR] Kapasitas VM di mapping beda dengan VMS runner ini")
+    if any(not 0 <= vm < len(VMS) for vm in mapping):
+        raise SystemExit("[ERROR] Mapping berisi indeks VM tidak valid")
 
 
 # ── Komunikasi dengan worker ──────────────────────────────────────────────────
@@ -231,14 +253,6 @@ def degree_of_imbalance(times):
     return (max(times) - min(times)) / avg if avg > 0 else 0.0
 
 
-def analytic_makespan(lengths, mapping):
-    """Makespan rumus f1 desain (detik simulasi), sama dengan FitnessEvaluator.java."""
-    loads = [0.0] * len(VMS)
-    for task, vm in enumerate(mapping):
-        loads[vm] += lengths[task] / VMS[vm]["capacity"]
-    return max(loads)
-
-
 def compute_metrics(records, cpu_s):
     vm_finish = [0.0] * len(VMS)
     for r in records:
@@ -281,6 +295,11 @@ def compute_metrics(records, cpu_s):
 
 def append_csv(path, row):
     new_file = not os.path.exists(path)
+    if not new_file:
+        with open(path, newline="") as f:
+            header = next(csv.reader(f), None)
+        if header != list(row):
+            raise SystemExit(f"[ERROR] {path} punya kolom berbeda; pakai folder --out baru")
     with open(path, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(row))
         if new_file:
@@ -300,31 +319,59 @@ METRICS = ["makespan_s", "energy_kwh", "avg_response_s", "utilization_pct", "di_
 
 
 def main():
-    parser = argparse.ArgumentParser(description="KPB real-world runner (Docker)")
+    parser = argparse.ArgumentParser(description="Real-world runner (Docker): KPB / HS / CSA")
     parser.add_argument("--dataset", default="../src/main/resources/dataset/GoCJ_Dataset_100.txt")
-    parser.add_argument("--k", type=float, default=20.0, help="persen VM kandidat (0, 100]")
+    parser.add_argument("--algo", choices=["kpb", "hs", "csa"], default="kpb")
+    parser.add_argument("--mapping", help="JSON mapping hasil project.Experiment --export-mapping "
+                                          "(dipakai apa adanya, opsi algoritma diabaikan)")
+    parser.add_argument("--k", type=float, help="KPB: persen VM kandidat (0, 100], default Java 20")
+    parser.add_argument("--seed", type=int, help="HS/CSA: seed (default Java 1)")
+    parser.add_argument("--evals", type=int, help="HS/CSA: jumlah evaluasi fitness (default Java 10000)")
+    parser.add_argument("--w", type=float, help="bobot makespan vs energi pada fitness (default Java 0.5)")
+    parser.add_argument("--hms", type=int, help="HS: harmony memory size")
+    parser.add_argument("--hmcr", type=float, help="HS: harmony memory considering rate")
+    parser.add_argument("--par", type=float, help="HS: pitch adjustment rate")
+    parser.add_argument("--pop", type=int, help="CSA: ukuran populasi")
+    parser.add_argument("--nselect", type=int, help="CSA: jumlah antibodi terbaik yang dikloning")
+    parser.add_argument("--beta", type=float, help="CSA: faktor kloning")
+    parser.add_argument("--mut-min", type=float, help="CSA: fraksi mutasi peringkat terbaik")
+    parser.add_argument("--mut-max", type=float, help="CSA: fraksi mutasi peringkat ke-nSelect")
+    parser.add_argument("--d", type=int, help="CSA: jumlah antibodi terburuk yang diganti")
     parser.add_argument("--repeat", type=int, default=3, help="jumlah repetisi (default 3)")
     parser.add_argument("--iters-per-mi", type=float, default=DEFAULT_ITERS_PER_MI,
                         help="iterasi CPU per MI (beban tetap, default 14)")
     parser.add_argument("--scale", type=float, default=None,
                         help="kunci skala detik-nyata/detik-simulasi (lewati kalibrasi otomatis)")
     parser.add_argument("--limit", type=int, default=0, help="hanya pakai N task pertama")
-    parser.add_argument("--out", default="results")
+    parser.add_argument("--out", help="folder sesi (default results/sessions/<algo>_<timestamp>)")
     parser.add_argument("--placement", default="../results/simulation/placement.csv")
     parser.add_argument("--quiet", action="store_true", help="sembunyikan log broker per cloudlet")
     args = parser.parse_args()
-    if not 0 < args.k <= 100:
-        raise SystemExit("--k harus di rentang (0, 100]")
     if args.repeat < 1:
         raise SystemExit("--repeat minimal 1")
 
     lengths = load_gocj(args.dataset)
+    dataset_name = os.path.splitext(os.path.basename(args.dataset))[0]
+    out = args.out or os.path.join("results", "sessions",
+                                   f"{args.algo}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+    os.makedirs(out, exist_ok=True)
+    dataset_path = args.dataset
     if args.limit:
         lengths = lengths[:args.limit]
-    capacities = [vm["capacity"] for vm in VMS]
+        dataset_path = os.path.join(out, f"{dataset_name}_first{args.limit}.txt")
+        with open(dataset_path, "w") as f:
+            f.write("\n".join(f"{x:g}" for x in lengths) + "\n")
 
     check_workers()
     placement_note = check_placement(args.placement)
+    if args.mapping:
+        schedule = load_mapping(args.mapping)
+    else:
+        schedule = java_schedule(args, dataset_path, os.path.join(out, f"mapping_{dataset_name}.json"))
+    check_mapping(schedule, lengths)
+    mapping = schedule["mapping"]
+    algo, seed = schedule["algo"], schedule["seed"]
+
     if args.scale is not None:
         scale = args.scale  # 1 detik simulasi = scale detik nyata (dikunci lewat CLI)
         scale_note = "locked"
@@ -332,26 +379,22 @@ def main():
         rate = calibrate()
         scale = args.iters_per_mi * REF_MIPS / rate  # 1 detik simulasi = scale detik nyata
         scale_note = "calibrated"
-    predicted = analytic_makespan(lengths, kpb_schedule(lengths, capacities, args.k)) * scale
+    predicted = schedule["analytic_makespan_s"] * scale
 
-    dataset_name = os.path.splitext(os.path.basename(args.dataset))[0]
-    tag = f"{dataset_name}_n{len(lengths)}_k{args.k:g}"
-    os.makedirs(args.out, exist_ok=True)
-    print(f"scheduler=KPB(k={args.k}%) realworld, {placement_note}")
-    print(f"dataset={args.dataset} tasks={len(lengths)} subset={subset_size(args.k, len(VMS))} "
+    k_text = "" if schedule["k_percent"] is None else f"{schedule['k_percent']:g}"
+    tag = (f"{dataset_name}_n{len(lengths)}_k{k_text}" if algo == "kpb"
+           else f"{dataset_name}_n{len(lengths)}_{algo}_seed{seed}")
+    print(f"scheduler={schedule['scheduler']} realworld, {placement_note}")
+    print(f"dataset={args.dataset} tasks={len(lengths)} algo={algo} "
           f"repeat={args.repeat} itersPerMI={args.iters_per_mi:g} scale={scale:.4f} ({scale_note})")
 
     runs = []
     for run in range(1, args.repeat + 1):
-        start = time.perf_counter()
-        mapping = kpb_schedule(lengths, capacities, args.k)
-        sched_ms = (time.perf_counter() - start) * 1000
-
         print(f"[run {run}/{args.repeat}] menjalankan task di container... "
               f"(prediksi analitik ±{predicted:.1f} s)", flush=True)
         records, cpu_s = execute(lengths, mapping, args.iters_per_mi, live=not args.quiet)
         m = compute_metrics(records, cpu_s)
-        m["scheduling_ms"] = sched_ms
+        m["scheduling_ms"] = schedule["scheduling_ms"]
         runs.append(m)
 
         ratio = m['makespan_s'] / predicted if predicted > 0 else float('nan')
@@ -360,18 +403,22 @@ def main():
               f"avgResponse={m['avg_response_s']:.3f}s, utilization={m['utilization_pct']:.2f}%, "
               f"DI={m['di_all_vm']:.4f} (VM terpakai {m['di_used_vm']:.4f}), "
               f"throughput={m['throughput_task_s']:.3f} task/s, cost=${m['cost_usd']:.2f}, "
-              f"schedulingTime={sched_ms:.3f} ms, vmsUsed={m['vms_used']}/20", flush=True)
+              f"schedulingTime={m['scheduling_ms']:.3f} ms, vmsUsed={m['vms_used']}/20", flush=True)
+        print(f"  algo={algo}, seed={'-' if seed is None else seed}, evaluations={schedule['evaluations']}, "
+              f"fitness={schedule['fitness']:.6f}", flush=True)
 
-        write_csv(os.path.join(args.out, f"tasks_{tag}_run{run}.csv"), records)
+        write_csv(os.path.join(out, f"tasks_{tag}_run{run}.csv"), records)
         row = {"timestamp": datetime.now().isoformat(timespec="seconds"), "dataset": dataset_name,
-               "tasks": m["tasks"], "k_percent": args.k, "run": run,
+               "tasks": m["tasks"], "k_percent": k_text, "run": run,
                "iters_per_mi": args.iters_per_mi, "scale": round(scale, 5),
                "predicted_makespan_s": round(predicted, 4)}
         row.update({key: round(m[key], 6) for key in METRICS})
         row["vms_used"] = m["vms_used"]
-        append_csv(os.path.join(args.out, "summary.csv"), row)
+        row.update({"algo": algo, "seed": "" if seed is None else seed,
+                    "evaluations": schedule["evaluations"], "fitness": round(schedule["fitness"], 8)})
+        append_csv(os.path.join(out, "summary.csv"), row)
 
-    agg = {"dataset": dataset_name, "tasks": len(lengths), "k_percent": args.k, "runs": len(runs)}
+    agg = {"dataset": dataset_name, "tasks": len(lengths), "k_percent": k_text, "runs": len(runs)}
     print(f"rata-rata ± std dari {len(runs)} run:")
     for key in METRICS:
         values = [r[key] for r in runs]
@@ -379,8 +426,9 @@ def main():
         std = statistics.stdev(values) if len(values) > 1 else 0.0
         agg[f"{key}_mean"], agg[f"{key}_std"] = round(mean, 6), round(std, 6)
         print(f"  {key:<18} {mean:12.4f} ± {std:.4f}")
-    append_csv(os.path.join(args.out, "aggregate.csv"), agg)
-    print(f"hasil -> {args.out}/summary.csv, {args.out}/aggregate.csv, {args.out}/tasks_{tag}_run*.csv")
+    agg.update({"algo": algo, "seed": "" if seed is None else seed})
+    append_csv(os.path.join(out, "aggregate.csv"), agg)
+    print(f"hasil -> {out}/summary.csv, {out}/aggregate.csv, {out}/tasks_{tag}_run*.csv")
 
 
 if __name__ == "__main__":
