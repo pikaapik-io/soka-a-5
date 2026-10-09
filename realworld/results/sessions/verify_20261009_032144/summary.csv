@@ -1,0 +1,2 @@
+timestamp,dataset,tasks,k_percent,run,iters_per_mi,scale,predicted_makespan_s,makespan_s,energy_kwh,avg_response_s,utilization_pct,di_all_vm,di_used_vm,throughput_task_s,cost_usd,scheduling_ms,vms_used
+2026-10-09T03:21:53,GoCJ_Dataset_100,100,100.0,1,14,0.0182,4.2022,6.5557,0.001678,2.846277,77.043336,0.724331,0.724331,15.253901,73.14684,0.227904,20
