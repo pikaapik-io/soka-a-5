@@ -1,0 +1,16 @@
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=4) realworld, placement cocok dengan CloudSim
+dataset=../src/main/resources/dataset/GoCJ_Dataset_100.txt tasks=100 algo=hs repeat=1 itersPerMI=14 scale=0.0211 (locked)
+[run 2] menjalankan task di container... (prediksi analitik ±4.4 s)
+  makespan=11.517s (nyata/prediksi=2.645x), energy=0.003021 kWh, avgResponse=5.846s, utilization=85.84%, DI=0.9451 (VM terpakai 0.9451), throughput=8.683 task/s, cost=$79.10, schedulingTime=106.974 ms, vmsUsed=20/20
+  algo=hs, seed=4, evaluations=10000, fitness=0.905369
+rata-rata ± std dari 1 run:
+  makespan_s              11.5170 ± 0.0000
+  energy_kwh               0.0030 ± 0.0000
+  avg_response_s           5.8465 ± 0.0000
+  utilization_pct         85.8442 ± 0.0000
+  di_all_vm                0.9451 ± 0.0000
+  di_used_vm               0.9451 ± 0.0000
+  throughput_task_s        8.6828 ± 0.0000
+  cost_usd                79.1004 ± 0.0000
+  scheduling_ms          106.9736 ± 0.0000
+hasil -> /home/exileerr/soka-a-5/realworld/results/sessions/experiment_rerun_20261009_195104/summary.csv, /home/exileerr/soka-a-5/realworld/results/sessions/experiment_rerun_20261009_195104/aggregate.csv, /home/exileerr/soka-a-5/realworld/results/sessions/experiment_rerun_20261009_195104/tasks_GoCJ_Dataset_100_n100_hs_seed4_run*.csv

@@ -1,0 +1,99 @@
+scheduler=KPB(k=100.0%)
+analitik: makespan=230.900 s, energy=0.059254 kWh
+algo=kpb, seed=-, evaluations=0, fitness=1.000000, schedulingTime=0.495 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=1)
+analitik: makespan=203.400 s, energy=0.053593 kWh
+algo=hs, seed=1, evaluations=10000, fitness=0.892686, schedulingTime=186.053 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=1)
+analitik: makespan=199.000 s, energy=0.052688 kWh
+algo=csa, seed=1, evaluations=10000, fitness=0.875516, schedulingTime=57.226 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=2)
+analitik: makespan=210.400 s, energy=0.055034 kWh
+algo=hs, seed=2, evaluations=10000, fitness=0.920003, schedulingTime=106.143 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=2)
+analitik: makespan=197.800 s, energy=0.052441 kWh
+algo=csa, seed=2, evaluations=10000, fitness=0.870833, schedulingTime=46.429 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=3)
+analitik: makespan=205.400 s, energy=0.054005 kWh
+algo=hs, seed=3, evaluations=10000, fitness=0.900491, schedulingTime=102.457 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=3)
+analitik: makespan=195.000 s, energy=0.051864 kWh
+algo=csa, seed=3, evaluations=10000, fitness=0.859907, schedulingTime=55.850 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=4)
+analitik: makespan=206.650 s, energy=0.054262 kWh
+algo=hs, seed=4, evaluations=10000, fitness=0.905369, schedulingTime=106.974 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=4)
+analitik: makespan=195.000 s, energy=0.051864 kWh
+algo=csa, seed=4, evaluations=10000, fitness=0.859907, schedulingTime=50.965 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=5)
+analitik: makespan=207.400 s, energy=0.054417 kWh
+algo=hs, seed=5, evaluations=10000, fitness=0.908296, schedulingTime=145.691 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=5)
+analitik: makespan=196.600 s, energy=0.052194 kWh
+algo=csa, seed=5, evaluations=10000, fitness=0.866151, schedulingTime=47.688 ms
+scheduler=KPB(k=100.0%)
+analitik: makespan=925.400 s, energy=0.246903 kWh
+algo=kpb, seed=-, evaluations=0, fitness=1.000000, schedulingTime=2.074 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=1)
+analitik: makespan=925.400 s, energy=0.246903 kWh
+algo=hs, seed=1, evaluations=10000, fitness=1.000000, schedulingTime=403.525 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=1)
+analitik: makespan=922.500 s, energy=0.246306 kWh
+algo=csa, seed=1, evaluations=10000, fitness=0.997224, schedulingTime=76.365 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=2)
+analitik: makespan=925.400 s, energy=0.246903 kWh
+algo=hs, seed=2, evaluations=10000, fitness=1.000000, schedulingTime=350.366 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=2)
+analitik: makespan=920.000 s, energy=0.245792 kWh
+algo=csa, seed=2, evaluations=10000, fitness=0.994831, schedulingTime=84.696 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=3)
+analitik: makespan=925.400 s, energy=0.246903 kWh
+algo=hs, seed=3, evaluations=10000, fitness=1.000000, schedulingTime=379.509 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=3)
+analitik: makespan=918.000 s, energy=0.245380 kWh
+algo=csa, seed=3, evaluations=10000, fitness=0.992917, schedulingTime=96.783 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=4)
+analitik: makespan=925.400 s, energy=0.246903 kWh
+algo=hs, seed=4, evaluations=10000, fitness=1.000000, schedulingTime=429.413 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=4)
+analitik: makespan=918.333 s, energy=0.245449 kWh
+algo=csa, seed=4, evaluations=10000, fitness=0.993236, schedulingTime=79.086 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=5)
+analitik: makespan=925.400 s, energy=0.246903 kWh
+algo=hs, seed=5, evaluations=10000, fitness=1.000000, schedulingTime=404.231 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=5)
+analitik: makespan=919.900 s, energy=0.245771 kWh
+algo=csa, seed=5, evaluations=10000, fitness=0.994736, schedulingTime=93.076 ms
+scheduler=KPB(k=100.0%)
+analitik: makespan=1866.350 s, energy=0.496711 kWh
+algo=kpb, seed=-, evaluations=0, fitness=1.000000, schedulingTime=7.454 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=1)
+analitik: makespan=1866.350 s, energy=0.496711 kWh
+algo=hs, seed=1, evaluations=10000, fitness=1.000000, schedulingTime=637.288 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=1)
+analitik: makespan=1841.833 s, energy=0.491665 kWh
+algo=csa, seed=1, evaluations=10000, fitness=0.988352, schedulingTime=114.494 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=2)
+analitik: makespan=1866.350 s, energy=0.496711 kWh
+algo=hs, seed=2, evaluations=10000, fitness=1.000000, schedulingTime=906.170 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=2)
+analitik: makespan=1834.000 s, energy=0.490052 kWh
+algo=csa, seed=2, evaluations=10000, fitness=0.984631, schedulingTime=117.748 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=3)
+analitik: makespan=1866.350 s, energy=0.496711 kWh
+algo=hs, seed=3, evaluations=10000, fitness=1.000000, schedulingTime=735.039 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=3)
+analitik: makespan=1837.900 s, energy=0.490855 kWh
+algo=csa, seed=3, evaluations=10000, fitness=0.986483, schedulingTime=100.082 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=4)
+analitik: makespan=1866.350 s, energy=0.496711 kWh
+algo=hs, seed=4, evaluations=10000, fitness=1.000000, schedulingTime=764.879 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=4)
+analitik: makespan=1826.000 s, energy=0.488405 kWh
+algo=csa, seed=4, evaluations=10000, fitness=0.980830, schedulingTime=104.031 ms
+scheduler=HS(HMS=30,HMCR=0.99,PAR=0.01,evals=10000,w=0.50,seed=5)
+analitik: makespan=1866.350 s, energy=0.496711 kWh
+algo=hs, seed=5, evaluations=10000, fitness=1.000000, schedulingTime=748.926 ms
+scheduler=CSA(pop=30,nSelect=10,beta=1.00,mut=0.01-0.10,d=3,evals=10000,w=0.50,seed=5)
+analitik: makespan=1827.700 s, energy=0.488755 kWh
+algo=csa, seed=5, evaluations=10000, fitness=0.981637, schedulingTime=131.494 ms

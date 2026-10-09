@@ -338,6 +338,10 @@ def main():
     parser.add_argument("--mut-max", type=float, help="CSA: fraksi mutasi peringkat ke-nSelect")
     parser.add_argument("--d", type=int, help="CSA: jumlah antibodi terburuk yang diganti")
     parser.add_argument("--repeat", type=int, default=3, help="jumlah repetisi (default 3)")
+    parser.add_argument("--first-run", type=int, default=1,
+                        help="nomor run pertama, agar repetisi dari beberapa pemanggilan tidak saling timpa")
+    parser.add_argument("--calibrate-only", action="store_true",
+                        help="cetak scale hasil kalibrasi lalu keluar (untuk mengunci --scale di grid)")
     parser.add_argument("--iters-per-mi", type=float, default=DEFAULT_ITERS_PER_MI,
                         help="iterasi CPU per MI (beban tetap, default 14)")
     parser.add_argument("--scale", type=float, default=None,
@@ -349,6 +353,11 @@ def main():
     args = parser.parse_args()
     if args.repeat < 1:
         raise SystemExit("--repeat minimal 1")
+
+    if args.calibrate_only:
+        check_workers()
+        print(f"scale={args.iters_per_mi * REF_MIPS / calibrate():.6f} itersPerMI={args.iters_per_mi:g}")
+        return
 
     lengths = load_gocj(args.dataset)
     dataset_name = os.path.splitext(os.path.basename(args.dataset))[0]
@@ -389,8 +398,8 @@ def main():
           f"repeat={args.repeat} itersPerMI={args.iters_per_mi:g} scale={scale:.4f} ({scale_note})")
 
     runs = []
-    for run in range(1, args.repeat + 1):
-        print(f"[run {run}/{args.repeat}] menjalankan task di container... "
+    for run in range(args.first_run, args.first_run + args.repeat):
+        print(f"[run {run}] menjalankan task di container... "
               f"(prediksi analitik ±{predicted:.1f} s)", flush=True)
         records, cpu_s = execute(lengths, mapping, args.iters_per_mi, live=not args.quiet)
         m = compute_metrics(records, cpu_s)

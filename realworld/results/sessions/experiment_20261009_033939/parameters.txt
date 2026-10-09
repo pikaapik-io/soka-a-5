@@ -1,0 +1,12 @@
+scale=0.021072 (locked, median of 5 calibrations)
+itersPerMI=14 (locked)
+datasets=100 500 1000
+seeds=1 2 3 4 5
+evals=10000
+reps=3
+pause_s=3
+stats_interval_s=3
+other_containers=grafana prometheus node-exporter 
+order_seed=2026
+started=2026-10-09T03:40:13+07:00
+finished=2026-10-09T14:00:26+07:00

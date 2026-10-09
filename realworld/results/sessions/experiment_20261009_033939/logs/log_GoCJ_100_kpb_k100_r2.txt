@@ -1,0 +1,16 @@
+scheduler=KPB(k=100.0%) realworld, placement cocok dengan CloudSim
+dataset=../src/main/resources/dataset/GoCJ_Dataset_100.txt tasks=100 algo=kpb repeat=1 itersPerMI=14 scale=0.0211 (locked)
+[run 2] menjalankan task di container... (prediksi analitik ±4.9 s)
+  makespan=7.143s (nyata/prediksi=1.468x), energy=0.001820 kWh, avgResponse=2.847s, utilization=69.07%, DI=0.8151 (VM terpakai 0.8151), throughput=13.999 task/s, cost=$73.85, schedulingTime=0.495 ms, vmsUsed=20/20
+  algo=kpb, seed=-, evaluations=0, fitness=1.000000
+rata-rata ± std dari 1 run:
+  makespan_s               7.1432 ± 0.0000
+  energy_kwh               0.0018 ± 0.0000
+  avg_response_s           2.8474 ± 0.0000
+  utilization_pct         69.0697 ± 0.0000
+  di_all_vm                0.8151 ± 0.0000
+  di_used_vm               0.8151 ± 0.0000
+  throughput_task_s       13.9993 ± 0.0000
+  cost_usd                73.8518 ± 0.0000
+  scheduling_ms            0.4951 ± 0.0000
+hasil -> /home/exileerr/soka-a-5/realworld/results/sessions/experiment_20261009_033939/summary.csv, /home/exileerr/soka-a-5/realworld/results/sessions/experiment_20261009_033939/aggregate.csv, /home/exileerr/soka-a-5/realworld/results/sessions/experiment_20261009_033939/tasks_GoCJ_Dataset_100_n100_k100_run*.csv
