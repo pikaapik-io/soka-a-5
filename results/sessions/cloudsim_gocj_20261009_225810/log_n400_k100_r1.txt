@@ -1,0 +1,42 @@
+=== Infrastruktur CloudSim ===
+DC-1 Performance | x86 / Linux / Xen | 3 host | $0.05/s, $0.02/GB RAM, $0.0010/GB storage, $0.005/Mbps BW
+  Host 0 | 8 PE x 3000 MIPS | RAM 32 GB | BW 10000 Mbps | P idle 175 W, P max 250 W | PE terpakai 8/8
+    vm0  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm3  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+  Host 1 | 8 PE x 3000 MIPS | RAM 32 GB | BW 10000 Mbps | P idle 175 W, P max 250 W | PE terpakai 8/8
+    vm1  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm4  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm6  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+  Host 2 | 8 PE x 3000 MIPS | RAM 32 GB | BW 10000 Mbps | P idle 175 W, P max 250 W | PE terpakai 8/8
+    vm2  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm5  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm7  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+DC-2 Efficiency | x86 / Linux / Xen | 3 host | $0.03/s, $0.01/GB RAM, $0.0008/GB storage, $0.003/Mbps BW
+  Host 0 | 8 PE x 1800 MIPS | RAM 32 GB | BW 5000 Mbps | P idle 72 W, P max 120 W | PE terpakai 6/8
+    vm8  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm11 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm16 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm19 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+  Host 1 | 8 PE x 1800 MIPS | RAM 32 GB | BW 5000 Mbps | P idle 72 W, P max 120 W | PE terpakai 5/8
+    vm9  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm12 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm14 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm17 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+  Host 2 | 8 PE x 1800 MIPS | RAM 32 GB | BW 5000 Mbps | P idle 72 W, P max 120 W | PE terpakai 5/8
+    vm10 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm13 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm15 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm18 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+Total: 2 datacenter, 6 host, 20 VM
+
+scheduler=KPB(k=100.0%)
+tasks=400, vmsCreated=20/20, cloudletsFinished=400/400
+makespan=757.299 s (analitik 751.200 s), energy=0.2019 kWh, avgResponse=354.802 s
+utilization=93.12%, DI=0.1822 (VM terpakai 0.1822), throughput=0.5282 task/s
+cost=$974.17, schedulingTime=5.831 ms
+algo=kpb, seed=-, evaluations=0, fitness=1.000000, schedulingTime=5.831 ms
+prediksi analitik ±751.200 s
+  makespan=757.299s (nyata/prediksi=1.008x), energy=0.201865 kWh, avgResponse=354.802s, utilization=93.12%, DI=0.1822 (VM terpakai 0.1822), throughput=0.528 task/s, cost=$974.17, schedulingTime=5.831 ms, vmsUsed=20/20
+mapping=[0, 1, 2, 3, 2, 3, 0, 1, 0, 3, 2, 4, 1, 5, 6, 7, 8, 9, 10, 11, 0, 10, 2, 3, 1, 11, 0, 6, 1, 8, 5, 0, 7, 4, 10, 9, 7, 12, 13, 0, 5, 11, 14, 3, 0, 6, 15, 1, 3, 8, 10, 2, 9, 16, 17, 0, 1, 7, 18, 19, 13, 11, 18, 5, 0, 4, 6, 1, 2, 1, 0, 8, 10, 2, 9, 6, 0, 2, 12, 14, 5, 1, 7, 2, 0, 11, 4, 8, 1, 3, 2, 0, 10, 3, 1, 2, 3, 6, 9, 11, 1, 5, 0, 7, 13, 15, 4, 8, 17, 3, 1, 0, 19, 18, 11, 3, 16, 10, 6, 1, 3, 14, 15, 1, 9, 8, 5, 18, 3, 12, 7, 4, 11, 3, 10, 0, 2, 6, 13, 8, 19, 3, 7, 9, 5, 4, 3, 14, 10, 11, 12, 16, 6, 15, 17, 8, 2, 2, 7, 9, 18, 5, 0, 4, 6, 1, 3, 11, 17, 19, 8, 10, 3, 13, 12, 15, 0, 16, 7, 9, 14, 18, 5, 4, 6, 11, 13, 8, 10, 17, 7, 5, 14, 18, 9, 6, 12, 1, 11, 16, 2, 4, 7, 19, 2, 10, 5, 8, 13, 0, 15, 12, 2, 6, 1, 11, 0, 3, 9, 1, 17, 10, 3, 8, 0, 1, 4, 19, 7, 3, 5, 14, 18, 11, 9, 6, 0, 12, 0, 16, 19, 10, 0, 14, 1, 8, 17, 4, 7, 9, 13, 0, 0, 6, 11, 5, 15, 10, 2, 8, 7, 9, 11, 4, 18, 6, 5, 16, 1, 17, 10, 12, 3, 19, 0, 8, 14, 7, 13, 4, 3, 11, 9, 18, 17, 6, 7, 17, 15, 5, 3, 19, 8, 15, 3, 10, 2, 4, 6, 9, 17, 0, 11, 4, 7, 5, 10, 3, 9, 8, 2, 7, 16, 12, 1, 4, 13, 10, 14, 13, 6, 3, 11, 5, 2, 9, 0, 8, 18, 2, 19, 0, 2, 15, 10, 11, 17, 7, 4, 5, 6, 0, 13, 1, 14, 2, 0, 8, 1, 9, 2, 12, 4, 16, 3, 5, 1, 0, 15, 11, 10, 6, 13, 7, 8, 2, 2, 3, 1, 2, 9, 3, 5, 18, 6, 8, 11, 10, 4, 7, 2, 9, 19, 5, 17, 0, 8, 10, 14, 18, 0, 6, 15, 5, 16, 4, 2, 9, 7, 13]
+vmFinish=[741.29, 746.38, 727.39, 757.3, 718.35, 724.57, 715.07, 717.13, 710.19, 718.7, 707.31, 689.94, 628.84, 683.88, 667.63, 700.05, 698.04, 666.74, 700.85, 684.86]
+hasil -> results/sessions/cloudsim_gocj_20261009_225810

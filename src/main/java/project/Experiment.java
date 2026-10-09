@@ -114,6 +114,18 @@ public final class Experiment {
 		System.out.printf(Locale.US, "cost=$%.2f, schedulingTime=%.3f ms%n",
 				result.totalCost(), result.schedulingMillis());
 		System.out.println(info.line());
+		if (!options.legacy) {
+			// Same line format as realworld/kpb_realworld.py, so one parser (analyze_grid.py) reads both.
+			long vmsUsed = Arrays.stream(result.vmFinishTimes()).filter(t -> t > 0).count();
+			System.out.printf(Locale.US, "prediksi analitik ±%.3f s%n", info.analyticMakespan);
+			System.out.printf(Locale.US, "  makespan=%.3fs (nyata/prediksi=%.3fx), energy=%.6f kWh, avgResponse=%.3fs, "
+							+ "utilization=%.2f%%, DI=%.4f (VM terpakai %.4f), throughput=%.3f task/s, cost=$%.2f, "
+							+ "schedulingTime=%.3f ms, vmsUsed=%d/%d%n",
+					result.makespan(), result.makespan() / info.analyticMakespan, result.energyKwh(),
+					result.averageResponse(), result.utilizationPercent(), result.degreeOfImbalance(),
+					result.degreeOfImbalanceUsedVms(), result.throughput(), result.totalCost(),
+					result.schedulingMillis(), vmsUsed, setup.vmList().size());
+		}
 		System.out.println("mapping=" + Arrays.toString(mapping));
 		System.out.println("vmFinish=" + Arrays.toString(round(result.vmFinishTimes())));
 
