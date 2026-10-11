@@ -1,0 +1,3 @@
+scheduler=KPB(k=100.0%) realworld, placement cocok dengan CloudSim
+dataset=/home/exileerr/soka-a-5/src/main/resources/dataset/GoCJ_Dataset_700.txt tasks=700 algo=kpb repeat=1 itersPerMI=14 scale=0.0273 (locked)
+[run 1] menjalankan task di container... (prediksi analitik ±34.3 s)

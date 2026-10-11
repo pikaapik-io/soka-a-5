@@ -1,0 +1,11 @@
+source=gocj
+scenarios=50 100 200 300 400 500 600 700 800 900 1000
+ks=20 50 100
+reps=3
+scale=0.027326 (locked)
+itersPerMI=14 (locked)
+pause_s=3
+order_seed=2026
+other_containers=grafana prometheus node-exporter 
+started=2026-10-09T23:06:33+07:00
+power_start=power_mode=Best performance plan=Balanced battery_status/charge=2/95% (status 2 = AC)

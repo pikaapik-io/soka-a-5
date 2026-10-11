@@ -103,6 +103,17 @@ def main():
     print("sel CV makespan > 5%: " + (", ".join(flagged) if flagged else "tidak ada")
           + ("" if any(r["n"] > 1 for r in summary) else " (1 run per sel)"))
 
+    # Drift: with scale locked, the ratio should stay flat in execution order (log modification time).
+    logs = sorted((os.path.getmtime(os.path.join(session, name)), name)
+                  for name in os.listdir(session) if LOG.match(name))
+    timeline = [parse(os.path.join(session, name))["ratio"] for _, name in logs]
+    if len(timeline) >= 10:
+        print("\ndrift rasio nyata/prediksi menurut urutan eksekusi (blok 10 run):")
+        for a in range(0, len(timeline), 10):
+            block = timeline[a:a + 10]
+            print(f"  run {a + 1:3d}-{a + len(block):3d}: mean {statistics.mean(block):.3f}  "
+                  f"min {min(block):.3f}  max {max(block):.3f}")
+
     stats = os.path.join(session, "docker_stats.csv")
     if os.path.exists(stats):
         busy = cpu_by_tier(stats)
