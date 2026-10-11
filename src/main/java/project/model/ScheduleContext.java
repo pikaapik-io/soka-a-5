@@ -15,8 +15,7 @@ import project.setup.VmFactory;
 /**
  * Everything {@link ScheduleEvaluator} needs beyond taskLength/vmCapacity: which
  * host each VM lives on, and each host's idle/max power and total MIPS (design
- * section 3.2). Shared by every scheduler (KPB, HS, CSA) so the fitness function
- * is computed the same way everywhere.
+ * section 3.2).
  */
 public final class ScheduleContext {
 	private final double[] taskLength;

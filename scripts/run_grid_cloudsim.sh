@@ -41,7 +41,7 @@ for n in $SIZES; do
     for r in $(seq 1 "$REPS"); do
       log="$SESSION/log_n${n}_k${k}_r$r.txt"
       start=$(date +%s.%N)
-      java -cp "$CP" -Dlog=error project.Experiment --dataset "$dataset" --algo kpb --k "$k" --out "$SESSION" > "$log"
+      java -cp "$CP" -Dlog=error project.Experiment --dataset "$dataset" --k "$k" --out "$SESSION" > "$log"
       printf 'n=%-6s k=%-4s r=%s %6.1f s wall | %s\n' "$n" "$k" "$r" "$(echo "$(date +%s.%N) - $start" | bc)" \
         "$(grep -oE 'makespan=[0-9.]+s \(nyata/prediksi=[0-9.]+x\)' "$log")"
     done

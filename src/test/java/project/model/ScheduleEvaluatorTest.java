@@ -31,19 +31,6 @@ class ScheduleEvaluatorTest {
 	}
 
 	@Test
-	void referenceMappingHasFitnessOne() {
-		FitnessFunction fitness = new FitnessFunction(EVALUATOR, 0.5, MAPPING);
-		assertEquals(1.0, fitness.evaluate(MAPPING), 1e-12);
-		assertEquals(1, fitness.evaluations());
-	}
-
-	@Test
-	void incrementalMoveMatchesFullEvaluation() {
-		double[] moved = EVALUATOR.moveTask(EVALUATOR.vmLoads(MAPPING), TASKS[4], 3, 1);
-		assertArrayEquals(EVALUATOR.vmLoads(new int[] {0, 1, 2, 3, 1}), moved, 1e-9);
-	}
-
-	@Test
 	void invalidMappingIsRejected() {
 		assertThrows(IllegalArgumentException.class, () -> EVALUATOR.makespan(new int[] {0, 1, 2, 3}));
 		assertThrows(IllegalArgumentException.class, () -> EVALUATOR.makespan(new int[] {0, 1, 2, 3, 4}));
