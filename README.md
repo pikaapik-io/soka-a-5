@@ -46,7 +46,7 @@
 
 ### 1.1 Latar Belakang
 
-Lingkungan cloud terdiri atas VM dengan kapasitas yang berbeda-beda, sedangkan ukuran task pada dataset GoCJ berkisar antara 15.000 hingga 900.000 MI. Penjadwal harus memutuskan VM mana yang mengerjakan setiap task. Ada dua pendekatan greedy klasik untuk keputusan ini, dan keduanya punya kelemahan:
+Lingkungan cloud terdiri atas VM dengan kapasitas yang berbeda-beda, sedangkan ukuran task pada dataset GoCJ berkisar antara 15,000 hingga 900,000 MI. Penjadwal harus memutuskan VM mana yang mengerjakan setiap task. Ada dua pendekatan greedy klasik untuk keputusan ini, dan keduanya punya kelemahan:
 
 - **MET (Minimum Execution Time)** selalu memilih VM yang paling cepat mengeksekusi task. Waktu antrean diabaikan, sehingga semua task menumpuk di VM tercepat.
 - **MCT (Minimum Completion Time)** memilih VM yang paling cepat *menyelesaikan* task, yaitu waktu antre ditambah waktu eksekusi. Akibatnya task besar bisa dikirim ke VM lambat yang kebetulan sedang kosong.
@@ -119,21 +119,21 @@ KPB(tasks, vms, k):
     return mapping
 ```
 
-**Kompleksitas:** O(N · M log M) dengan N = jumlah task dan M = jumlah VM, karena VM diurutkan ulang untuk setiap task. Untuk N = 1.000 dan M = 20, prosesnya selesai dalam hitungan milidetik.
+**Kompleksitas:** O(N · M log M) dengan N = jumlah task dan M = jumlah VM, karena VM diurutkan ulang untuk setiap task. Untuk N = 1,000 dan M = 20, prosesnya selesai dalam hitungan milidetik.
 
 ### 2.4 Contoh Perhitungan
 
-Data contoh bawaan program memakai 5 task dan 20 VM dengan k = 20%, sehingga s = 4. Untuk setiap task, keempat VM V3 (10.000 MIPS) selalu menjadi kandidat terbaik.
+Data contoh bawaan program memakai 5 task dan 20 VM dengan k = 20%, sehingga s = 4. Untuk setiap task, keempat VM V3 (10,000 MIPS) selalu menjadi kandidat terbaik.
 
 | Task | Length (MI) | ETC di V3 | `ready` VM0..VM3 sebelum | CT kandidat | VM terpilih |
 |:---:|---:|---:|:---:|:---:|:---:|
-| 0 | 900.000 | 90 | 0, 0, 0, 0 | 90, 90, 90, 90 | VM0 |
-| 1 | 600.000 | 60 | 90, 0, 0, 0 | 150, 60, 60, 60 | VM1 |
-| 2 | 450.000 | 45 | 90, 60, 0, 0 | 135, 105, 45, 45 | VM2 |
-| 3 | 300.000 | 30 | 90, 60, 45, 0 | 120, 90, 75, 30 | VM3 |
-| 4 | 150.000 | 15 | 90, 60, 45, 30 | 105, 75, 60, **45** | VM3 |
+| 0 | 900,000 | 90 | 0, 0, 0, 0 | 90, 90, 90, 90 | VM0 |
+| 1 | 600,000 | 60 | 90, 0, 0, 0 | 150, 60, 60, 60 | VM1 |
+| 2 | 450,000 | 45 | 90, 60, 0, 0 | 135, 105, 45, 45 | VM2 |
+| 3 | 300,000 | 30 | 90, 60, 45, 0 | 120, 90, 75, 30 | VM3 |
+| 4 | 150,000 | 15 | 90, 60, 45, 30 | 105, 75, 60, **45** | VM3 |
 
-Hasilnya `mapping = [0, 1, 2, 3, 3]`, sama dengan output `mvn -q exec:java`. Menurut rumus f1 desain, makespan-nya 90 s. Dengan Cloudlet memakai seluruh PE VM tujuan dan scheduler `SpaceShared`, makespan CloudSim menjadi **90,21 s**.
+Hasilnya `mapping = [0, 1, 2, 3, 3]`, sama dengan output `mvn -q exec:java`. Menurut rumus f1 desain, makespan-nya 90 s. Dengan Cloudlet memakai seluruh PE VM tujuan dan scheduler `SpaceShared`, makespan CloudSim menjadi **90.21 s**.
 
 ### 2.5 Perilaku KPB pada VM yang Konsisten
 
@@ -157,21 +157,21 @@ Arsitektur ini dibangun di **CloudSim Plus 6.6.1** sesuai Draft Desain Project b
 
 ```mermaid
 flowchart TD
-    T["Cloudlet GoCJ 50–1.000 / Synthetic 1.000–10.000 task<br/>300 KB in/out · tiba t = 0"]
+    T["Cloudlet GoCJ 50–1,000 / Synthetic 1,000–10,000 task<br/>300 KB in/out · tiba t = 0"]
     K["KPB Scheduler<br/>subset k% VM terbaik → min CT"]
     Broker["DatacenterBrokerSimple<br/>bindCloudletToVm(mapping)"]
     T --> K --> Broker
 
-    subgraph DC1["DC-1 Performance · x86 · Linux · Xen · $0,05/s"]
-        A0["Host A0 · 8 PE × 3.000<br/>vm00 V3 · vm03 V3"]
-        A1["Host A1 · 8 PE × 3.000<br/>vm01 V3 · vm04 V2 · vm06 V2"]
-        A2["Host A2 · 8 PE × 3.000<br/>vm02 V3 · vm05 V2 · vm07 V2"]
+    subgraph DC1["DC-1 Performance · x86 · Linux · Xen · $0.05/s"]
+        A0["Host A0 · 8 PE × 3,000<br/>vm00 V3 · vm03 V3"]
+        A1["Host A1 · 8 PE × 3,000<br/>vm01 V3 · vm04 V2 · vm06 V2"]
+        A2["Host A2 · 8 PE × 3,000<br/>vm02 V3 · vm05 V2 · vm07 V2"]
     end
 
-    subgraph DC2["DC-2 Efficiency · x86 · Linux · Xen · $0,03/s"]
-        B0["Host B0 · 8 PE × 1.800<br/>vm08 V2 · vm11 V2 · vm16 V1 · vm19 V1"]
-        B1["Host B1 · 8 PE × 1.800<br/>vm09 V2 · vm12 V1 · vm14 V1 · vm17 V1"]
-        B2["Host B2 · 8 PE × 1.800<br/>vm10 V2 · vm13 V1 · vm15 V1 · vm18 V1"]
+    subgraph DC2["DC-2 Efficiency · x86 · Linux · Xen · $0.03/s"]
+        B0["Host B0 · 8 PE × 1,800<br/>vm08 V2 · vm11 V2 · vm16 V1 · vm19 V1"]
+        B1["Host B1 · 8 PE × 1,800<br/>vm09 V2 · vm12 V1 · vm14 V1 · vm17 V1"]
+        B2["Host B2 · 8 PE × 1,800<br/>vm10 V2 · vm13 V1 · vm15 V1 · vm18 V1"]
     end
 
     Broker --> DC1
@@ -187,18 +187,18 @@ flowchart TD
 | VmAllocationPolicy | VmAllocationPolicySimple + batasan C3–C6 | VmAllocationPolicySimple + batasan C3–C6 |
 | VmScheduler | VmSchedulerTimeShared | VmSchedulerTimeShared |
 | CloudletScheduler VM | CloudletSchedulerSpaceShared | CloudletSchedulerSpaceShared |
-| Cost per second | $0,05 | $0,03 |
-| Cost per RAM (GB) | $0,02 | $0,01 |
-| Cost per storage (GB) | $0,001 | $0,0008 |
-| Cost per bandwidth (Mbps) | $0,005 | $0,003 |
+| Cost per second | $0.05 | $0.03 |
+| Cost per RAM (GB) | $0.02 | $0.01 |
+| Cost per storage (GB) | $0.001 | $0.0008 |
+| Cost per bandwidth (Mbps) | $0.005 | $0.003 |
 
 ### 3.2 Spesifikasi Host
 
 | Tipe Host | Jumlah | PE × MIPS | RAM | Bandwidth | P idle | P maks |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
-| A Performance (DC-1) | 3 | 8 × 3.000 | 32 GB | 10 Gbps | 175 W | 250 W |
-| B Efficiency (DC-2) | 3 | 8 × 1.800 | 32 GB | 5 Gbps | 72 W | 120 W |
-| **Total** | **6** | **48 PE · 115.200 MIPS** | **192 GB** | — | — | — |
+| A Performance (DC-1) | 3 | 8 × 3,000 | 32 GB | 10 Gbps | 175 W | 250 W |
+| B Efficiency (DC-2) | 3 | 8 × 1,800 | 32 GB | 5 Gbps | 72 W | 120 W |
+| **Total** | **6** | **48 PE · 115,200 MIPS** | **192 GB** | — | — | — |
 
 Model daya: `PowerModelHostSimple`, linear `P(u) = P_idle + (P_maks − P_idle) × u`.
 
@@ -206,10 +206,10 @@ Model daya: `PowerModelHostSimple`, linear `P(u) = P_idle + (P_maks − P_idle) 
 
 | Tipe VM | Jumlah | PE × MIPS | Kapasitas (C_j) | RAM | Bandwidth | Indeks | Ditempatkan di |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| V3 Large | 4 | 4 × 2.500 | 10.000 MIPS | 8 GB | 1 Gbps | VM 0–3 | DC-1 (hanya muat di Tipe A) |
-| V2 Medium | 8 | 2 × 1.500 | 3.000 MIPS | 4 GB | 1 Gbps | VM 4–11 | 4 di DC-1, 4 di DC-2 |
-| V1 Small | 8 | 1 × 1.000 | 1.000 MIPS | 2 GB | 500 Mbps | VM 12–19 | DC-2 |
-| **Total** | **20** | **40 PE** | **72.000 MIPS** | **80 GB** | — | — | — |
+| V3 Large | 4 | 4 × 2,500 | 10,000 MIPS | 8 GB | 1 Gbps | VM 0–3 | DC-1 (hanya muat di Tipe A) |
+| V2 Medium | 8 | 2 × 1,500 | 3,000 MIPS | 4 GB | 1 Gbps | VM 4–11 | 4 di DC-1, 4 di DC-2 |
+| V1 Small | 8 | 1 × 1,000 | 1,000 MIPS | 2 GB | 500 Mbps | VM 12–19 | DC-2 |
+| **Total** | **20** | **40 PE** | **72,000 MIPS** | **80 GB** | — | — | — |
 
 ### 3.4 Penempatan VM per Host
 
@@ -217,13 +217,13 @@ Hasil CloudSim (`VmAllocationPolicySimple` + batasan C3–C6), sama dengan gamba
 
 | DC | Host | Tipe host | VM yang ditempatkan | PE terpakai | MIPS VM / MIPS host |
 |:---:|:---:|:---:|:---|:---:|:---:|
-| DC-1 Performance | A0 | A | vm00 V3, vm03 V3 | 8 / 8 | 20.000 / 24.000 |
-| DC-1 Performance | A1 | A | vm01 V3, vm04 V2, vm06 V2 | 8 / 8 | 16.000 / 24.000 |
-| DC-1 Performance | A2 | A | vm02 V3, vm05 V2, vm07 V2 | 8 / 8 | 16.000 / 24.000 |
-| DC-2 Efficiency | B0 | B | vm08 V2, vm11 V2, vm16 V1, vm19 V1 | 6 / 8 | 8.000 / 14.400 |
-| DC-2 Efficiency | B1 | B | vm09 V2, vm12 V1, vm14 V1, vm17 V1 | 5 / 8 | 6.000 / 14.400 |
-| DC-2 Efficiency | B2 | B | vm10 V2, vm13 V1, vm15 V1, vm18 V1 | 5 / 8 | 6.000 / 14.400 |
-| **Total** | **6** | — | **20 VM** | **40 / 48** | **72.000 / 115.200** |
+| DC-1 Performance | A0 | A | vm00 V3, vm03 V3 | 8 / 8 | 20,000 / 24,000 |
+| DC-1 Performance | A1 | A | vm01 V3, vm04 V2, vm06 V2 | 8 / 8 | 16,000 / 24,000 |
+| DC-1 Performance | A2 | A | vm02 V3, vm05 V2, vm07 V2 | 8 / 8 | 16,000 / 24,000 |
+| DC-2 Efficiency | B0 | B | vm08 V2, vm11 V2, vm16 V1, vm19 V1 | 6 / 8 | 8,000 / 14,400 |
+| DC-2 Efficiency | B1 | B | vm09 V2, vm12 V1, vm14 V1, vm17 V1 | 5 / 8 | 6,000 / 14,400 |
+| DC-2 Efficiency | B2 | B | vm10 V2, vm13 V1, vm15 V1, vm18 V1 | 5 / 8 | 6,000 / 14,400 |
+| **Total** | **6** | — | **20 VM** | **40 / 48** | **72,000 / 115,200** |
 
 ### 3.5 Batasan Keras (Desain bagian 4.3)
 
@@ -233,7 +233,7 @@ Hasil CloudSim (`VmAllocationPolicySimple` + batasan C3–C6), sama dengan gamba
 | C2 | Setiap VM tepat di satu host | Ditangani CloudSim; `SimulationSetup` memvalidasi 20/20 VM berhasil dibuat |
 | C3 | Σ PE VM ≤ PE host | `ConstrainedPlacement`. `VmSchedulerTimeShared` bawaan hanya mengecek MIPS dan sempat menaruh 11 PE di host 8 PE |
 | C4, C5 | RAM dan bandwidth host tidak terlampaui | `ConstrainedPlacement` + `Host.isSuitableForVm()` |
-| C6 | MIPS per PE VM ≤ MIPS per PE host | `ConstrainedPlacement`: V3 (2.500) ditolak oleh host Tipe B (1.800) |
+| C6 | MIPS per PE VM ≤ MIPS per PE host | `ConstrainedPlacement`: V3 (2,500) ditolak oleh host Tipe B (1,800) |
 | C7 | Non-preemptive | Cloudlet tidak pernah dihentikan atau dipindah VM (tidak ada migrasi) |
 | C8 | Variabel keputusan biner | Satu task → satu VM, satu VM → satu host |
 
@@ -301,18 +301,18 @@ Setiap run memvalidasi: 20/20 VM dibuat, setiap cloudlet berjalan di VM hasil KP
 | Aspek | GoCJ | Synthetic |
 |:---|:---|:---|
 | Sumber | GoCJ (Google Cloud Jobs) Dataset, Mendeley Data, diturunkan dari jejak beban kerja Google cluster | Dibuat dari GoCJ dengan [`realworld/generate_synthetic.py`](realworld/generate_synthetic.py) |
-| Ukuran | 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1.000 task | 1.000, 2.000, 3.000, …, 10.000 task |
+| Ukuran | 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1,000 task | 1,000, 2,000, 3,000, …, 10,000 task |
 | File | `GoCJ_Dataset_<N>.txt`; ukuran 50 = `GoCJ_Dataset_50_subset.txt` (50 baris pertama GoCJ 100, karena tidak ada file resmi GoCJ 50) | `Synthetic_Dataset_<N>.txt` |
 | Format | Teks, satu panjang task (MI) per baris | Sama |
-| Rentang | 15.000 – 900.000 MI | 15.000 – 900.000 MI |
+| Rentang | 15,000 – 900,000 MI | 15,000 – 900,000 MI |
 
-**Cara membuat dataset synthetic.** Semua file GoCJ resmi (100–1.000, total 5.500 task) digabung menjadi satu pool, lalu setiap ukuran N diambil acak *dengan pengembalian* (bootstrap) dari pool itu. Setiap ukuran memakai generatornya sendiri, `random.Random(42 + N)`, sehingga file yang sama selalu terbentuk ulang identik. Distribusinya mengikuti GoCJ: kuartil sama, rata-rata berbeda ≤ 2,9%, jarak Kolmogorov-Smirnov ≤ 0,024.
+**Cara membuat dataset synthetic.** Semua file GoCJ resmi (100–1,000, total 5,500 task) digabung menjadi satu pool, lalu setiap ukuran N diambil acak *dengan pengembalian* (bootstrap) dari pool itu. Setiap ukuran memakai generatornya sendiri, `random.Random(42 + N)`, sehingga file yang sama selalu terbentuk ulang identik. Distribusinya mengikuti GoCJ: kuartil sama, rata-rata berbeda ≤ 2.9%, jarak Kolmogorov-Smirnov ≤ 0.024.
 
 ```bash
 python3 realworld/generate_synthetic.py --dir src/main/resources/dataset --seed 42
 ```
 
-Rata-rata panjang task tiap file GoCJ tidak sama persis (124.991–138.420 MI), sehingga total beban (Σ MI) tidak naik linear terhadap jumlah task. Contohnya GoCJ 600 berisi 82,3 juta MI (naik 27% dari GoCJ 500), sedangkan GoCJ 700 hanya 87,5 juta MI (naik 6%). Hal ini menjelaskan "tangga" pada diagram makespan GoCJ di bagian 6.3.
+Rata-rata panjang task tiap file GoCJ tidak sama persis (124,991–138,420 MI), sehingga total beban (Σ MI) tidak naik linear terhadap jumlah task. Contohnya GoCJ 600 berisi 82.3 juta MI (naik 27% dari GoCJ 500), sedangkan GoCJ 700 hanya 87.5 juta MI (naik 6%). Hal ini menjelaskan "tangga" pada diagram makespan GoCJ di bagian 6.5 (penjelasan di 6.6).
 
 Pemetaan ke cloudlet (Desain bagian 1.3):
 
@@ -329,93 +329,174 @@ Pemetaan ke cloudlet (Desain bagian 1.3):
 
 ## 6. Hasil Simulasi (CloudSim Plus)
 
-Grid lengkap: **KPB dengan k = 20%, 50%, 100%** pada GoCJ 50–1.000 (11 ukuran, 33 run) dan Synthetic 1.000–10.000 (10 ukuran, 30 run). CloudSim deterministik (dua run identik, kecuali waktu penjadwalan wall-clock), jadi satu run per sel. Data mentah ada di folder sesi:
+Semua angka di bagian ini adalah hasil **simulasi CloudSim Plus 6.6.1 penuh**, bukan hitungan rumus. Rumus (model analitik f1 dan rumus kapasitas di 6.6) hanya dipakai sebagai pembanding dan penjelasan.
 
-- GoCJ: [`results/sessions/cloudsim_gocj_20261009_225810/`](results/sessions/cloudsim_gocj_20261009_225810/) (`grid_summary.csv`, log, `cloudlets_*.csv`, `mapping_*.json`)
-- Synthetic: [`results/sessions/cloudsim_synthetic_20261009_225854/`](results/sessions/cloudsim_synthetic_20261009_225854/)
+### 6.1 Cara Pengujian di CloudSim Plus
 
-Keterangan kolom: energi mencakup 6 host dari t = 0 sampai makespan, termasuk daya idle; biaya = CPU + RAM + bandwidth (`VmCost`); DI dihitung atas 20 VM sesuai definisi desain. **Tebal** menandai nilai terbaik di antara ketiga k untuk jumlah task yang sama. Waktu penjadwalan diukur dengan wall-clock dan dipengaruhi JIT/GC, sehingga tidak diberi tanda tebal.
+Setiap run (satu dataset, satu nilai k) menjalankan [`project.Experiment`](src/main/java/project/Experiment.java):
 
-### 6.1 GoCJ 50–1.000 Task
+1. **Penjadwalan.** `GoCJLoader` membaca dataset, lalu `KpbScheduler` menghasilkan mapping task → VM hanya dari panjang task (MI) dan kapasitas VM (MIPS × PE).
+2. **Membangun infrastruktur di CloudSim.** `SimulationSetup` membuat infrastruktur bagian 3 sebagai objek CloudSim: 2 `Datacenter`, 6 `Host` dengan `PowerModelHostSimple`, dan 20 `Vm` dengan `CloudletSchedulerSpaceShared`. Penempatan VM mengikuti batasan C3–C6. Setiap task menjadi satu `Cloudlet` (300 KB in/out, tiba di t = 0).
+3. **Binding.** Setiap cloudlet diikat ke VM pilihan KPB lewat `DatacenterBrokerSimple.bindCloudletToVm`, dan hasil binding dicek.
+4. **Simulasi.** `simulation.start()` menjalankan simulasi *event-driven*: cloudlet diantre per VM, dieksekusi memakai seluruh PE VM, lalu selesai pada waktu simulasi.
+5. **Validasi.** Program berhenti tanpa mencetak metrik bila VM yang dibuat kurang dari 20/20, ada cloudlet yang berjalan di VM lain selain pilihan KPB, atau ada cloudlet yang tidak selesai.
+6. **Metrik.** `MetricsCollector` dan `EnergyMeter` menghitung 8 metrik dari objek CloudSim: waktu mulai dan selesai cloudlet, utilisasi host per tick (energi), dan `VmCost` (biaya).
+
+Bukti dari log run Synthetic 10,000 task dengan k = 20% (dipotong):
+
+```text
+=== Infrastruktur CloudSim ===
+DC-1 Performance | x86 / Linux / Xen | 3 host | $0.05/s, $0.02/GB RAM, $0.0010/GB storage, $0.005/Mbps BW
+  Host 0 | 8 PE x 3000 MIPS | RAM 32 GB | BW 10000 Mbps | P idle 175 W, P max 250 W | PE terpakai 8/8
+    vm0  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    ...
+Total: 2 datacenter, 6 host, 20 VM
+
+scheduler=KPB(k=20.0%)
+tasks=10000, vmsCreated=20/20, cloudletsFinished=10000/10000
+makespan=32947.100 s (analitik 32447.350 s), energy=7.9140 kWh, avgResponse=16341.771 s
+utilization=19.96%, DI=5.0088 (VM terpakai 0.0027), throughput=0.3035 task/s
+cost=$39601.93, schedulingTime=6.671 ms
+vmFinish=[32947.1, 32874.03, 32875.61, 32859.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+```
+
+| Grid | Ukuran dataset | k | Run | Folder sesi |
+|:---|:---|:---:|:---:|:---|
+| GoCJ | 50, 100, 200, …, 1,000 (11 ukuran) | 20, 50, 100% | 33 | [`results/sessions/cloudsim_gocj_20261009_225810/`](results/sessions/cloudsim_gocj_20261009_225810/) |
+| Synthetic | 1,000, 2,000, …, 10,000 (10 ukuran) | 20, 50, 100% | 30 | [`results/sessions/cloudsim_synthetic_20261009_225854/`](results/sessions/cloudsim_synthetic_20261009_225854/) |
+
+CloudSim deterministik, jadi cukup satu run per sel. Grid synthetic dijalankan ulang pada 2026-10-11 dengan kode terbaru (setelah HS/CSA dihapus). Hasilnya identik di 30/30 sel untuk tujuh metrik; hanya waktu penjadwalan yang sedikit berbeda karena diukur dengan jam dinding (contoh: 10,000 task, k = 100%: 5.76 ms vs 5.22 ms).
+
+```bash
+SOURCE=gocj bash scripts/run_grid_cloudsim.sh         # GoCJ, ±1 menit
+SOURCE=synthetic bash scripts/run_grid_cloudsim.sh    # Synthetic, ±3 menit
+```
+
+Keterangan kolom tabel 6.2–6.3: energi mencakup 6 host dari t = 0 sampai makespan, termasuk daya idle; biaya = CPU + RAM + bandwidth (`VmCost`); DI = (T_maks − T_min) / T_rata-rata atas waktu selesai 20 VM. **Tebal** menandai nilai terbaik di antara ketiga k untuk jumlah task yang sama. Waktu penjadwalan diukur dengan jam dinding dan dipengaruhi JIT/GC, sehingga tidak diberi tanda tebal.
+
+### 6.2 Hasil GoCJ 50–1,000 Task
 
 | Task | k | Makespan (s) | Energi (kWh) | Biaya (USD) | Avg response time (s) | Utilisasi (%) | Degree of Imbalance (20 VM) | Throughput (task/s) | Waktu penjadwalan (ms) |
 |---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 50 | 20% | 213,00 | 0,0499 | 321,01 | 74,35 | 16,45 | 6,079 | 0,235 | 0,36 |
-| 50 | 50% | 174,75 | 0,0420 | 275,12 | 53,26 | 30,27 | 3,304 | 0,286 | 0,13 |
-| 50 | 100% | **168,85** | **0,0408** | **268,03** | **47,82** | **37,50** | **2,667** | **0,296** | 0,34 |
-| 100 | 20% | 367,80 | 0,0875 | 506,77 | 164,19 | 18,64 | 5,364 | 0,272 | 0,44 |
-| 100 | 50% | 273,35 | 0,0681 | 393,43 | 111,88 | 41,06 | 2,436 | 0,366 | 0,53 |
-| 100 | 100% | **233,08** | **0,0599** | **345,11** | **90,71** | **70,45** | **0,747** | **0,429** | 0,36 |
-| 200 | 20% | 713,82 | 0,1707 | 922,00 | 372,66 | 19,35 | 5,169 | 0,280 | 1,17 |
-| 200 | 50% | 521,16 | 0,1312 | 690,80 | 254,24 | 44,38 | 2,253 | 0,384 | 0,61 |
-| 200 | 100% | **436,75** | **0,1140** | **589,51** | **201,84** | **82,49** | **0,335** | **0,458** | 0,89 |
-| 300 | 20% | 1.091,55 | 0,2610 | 1.375,27 | 545,77 | 19,30 | 5,182 | 0,275 | 0,76 |
-| 300 | 50% | 781,42 | 0,1973 | 1.003,12 | 371,85 | 45,54 | 2,196 | 0,384 | 0,69 |
-| 300 | 100% | **648,65** | **0,1703** | **843,79** | **293,23** | **86,34** | **0,259** | **0,462** | 0,44 |
-| 400 | 20% | 1.321,78 | 0,3174 | 1.651,55 | 644,62 | 19,93 | 5,019 | 0,303 | 0,45 |
-| 400 | 50% | 911,93 | 0,2332 | 1.159,73 | 441,69 | 49,32 | 2,028 | 0,439 | 0,60 |
-| 400 | 100% | **757,30** | **0,2019** | **974,17** | **354,80** | **93,12** | **0,182** | **0,528** | 5,83 |
-| 500 | 20% | 1.655,38 | 0,3976 | 2.051,87 | 826,73 | 19,94 | 5,016 | 0,302 | 0,49 |
-| 500 | 50% | 1.146,19 | 0,2930 | 1.440,84 | 565,91 | 48,99 | 2,041 | 0,436 | 0,56 |
-| 500 | 100% | **933,07** | **0,2497** | **1.185,10** | **452,88** | **95,29** | **0,112** | **0,536** | 0,90 |
-| 600 | 20% | 2.122,40 | 0,5088 | 2.612,29 | 1.021,66 | 19,68 | 5,081 | 0,283 | 0,85 |
-| 600 | 50% | 1.486,67 | 0,3783 | 1.849,42 | 698,54 | 47,71 | 2,096 | 0,404 | 1,29 |
-| 600 | 100% | **1.215,70** | **0,3232** | **1.524,26** | **558,96** | **92,33** | **0,131** | **0,494** | 2,11 |
-| 700 | 20% | 2.242,36 | 0,5381 | 2.756,24 | 1.159,95 | 19,83 | 5,044 | 0,312 | 0,73 |
-| 700 | 50% | 1.549,90 | 0,3958 | 1.925,29 | 794,79 | 48,85 | 2,047 | 0,452 | 1,86 |
-| 700 | 100% | **1.265,28** | **0,3380** | **1.583,74** | **637,46** | **95,33** | **0,092** | **0,553** | 1,28 |
-| 800 | 20% | 2.540,16 | 0,6094 | 3.113,60 | 1.312,54 | 19,80 | 5,051 | 0,315 | 1,10 |
-| 800 | 50% | 1.769,17 | 0,4510 | 2.188,41 | 898,54 | 48,47 | 2,063 | 0,452 | 1,71 |
-| 800 | 100% | **1.440,14** | **0,3842** | **1.793,59** | **721,09** | **94,32** | **0,107** | **0,555** | 1,71 |
-| 900 | 20% | 3.065,60 | 0,7359 | 3.744,13 | 1.461,48 | 19,88 | 5,031 | 0,294 | 0,86 |
-| 900 | 50% | 2.127,51 | 0,5433 | 2.618,43 | 1.000,69 | 48,70 | 2,053 | 0,423 | 2,19 |
-| 900 | 100% | **1.725,95** | **0,4617** | **2.136,55** | **802,66** | **95,22** | **0,088** | **0,521** | 1,77 |
-| 1.000 | 20% | 3.331,27 | 0,7990 | 4.062,94 | 1.602,00 | 19,76 | 5,060 | 0,300 | 2,61 |
-| 1.000 | 50% | 2.313,56 | 0,5900 | 2.841,69 | 1.097,82 | 48,48 | 2,063 | 0,432 | 10,08 |
-| 1.000 | 100% | **1.880,16** | **0,5020** | **2.321,60** | **881,11** | **94,40** | **0,099** | **0,532** | 6,15 |
+| 50 | 20% | 213.00 | 0.0499 | 321.01 | 74.35 | 16.45 | 6.079 | 0.235 | 0.36 |
+| 50 | 50% | 174.75 | 0.0420 | 275.12 | 53.26 | 30.27 | 3.304 | 0.286 | 0.13 |
+| 50 | 100% | **168.85** | **0.0408** | **268.03** | **47.82** | **37.50** | **2.667** | **0.296** | 0.34 |
+| 100 | 20% | 367.80 | 0.0875 | 506.77 | 164.19 | 18.64 | 5.364 | 0.272 | 0.44 |
+| 100 | 50% | 273.35 | 0.0681 | 393.43 | 111.88 | 41.06 | 2.436 | 0.366 | 0.53 |
+| 100 | 100% | **233.08** | **0.0599** | **345.11** | **90.71** | **70.45** | **0.747** | **0.429** | 0.36 |
+| 200 | 20% | 713.82 | 0.1707 | 922.00 | 372.66 | 19.35 | 5.169 | 0.280 | 1.17 |
+| 200 | 50% | 521.16 | 0.1312 | 690.80 | 254.24 | 44.38 | 2.253 | 0.384 | 0.61 |
+| 200 | 100% | **436.75** | **0.1140** | **589.51** | **201.84** | **82.49** | **0.335** | **0.458** | 0.89 |
+| 300 | 20% | 1,091.55 | 0.2610 | 1,375.27 | 545.77 | 19.30 | 5.182 | 0.275 | 0.76 |
+| 300 | 50% | 781.42 | 0.1973 | 1,003.12 | 371.85 | 45.54 | 2.196 | 0.384 | 0.69 |
+| 300 | 100% | **648.65** | **0.1703** | **843.79** | **293.23** | **86.34** | **0.259** | **0.462** | 0.44 |
+| 400 | 20% | 1,321.78 | 0.3174 | 1,651.55 | 644.62 | 19.93 | 5.019 | 0.303 | 0.45 |
+| 400 | 50% | 911.93 | 0.2332 | 1,159.73 | 441.69 | 49.32 | 2.028 | 0.439 | 0.60 |
+| 400 | 100% | **757.30** | **0.2019** | **974.17** | **354.80** | **93.12** | **0.182** | **0.528** | 5.83 |
+| 500 | 20% | 1,655.38 | 0.3976 | 2,051.87 | 826.73 | 19.94 | 5.016 | 0.302 | 0.49 |
+| 500 | 50% | 1,146.19 | 0.2930 | 1,440.84 | 565.91 | 48.99 | 2.041 | 0.436 | 0.56 |
+| 500 | 100% | **933.07** | **0.2497** | **1,185.10** | **452.88** | **95.29** | **0.112** | **0.536** | 0.90 |
+| 600 | 20% | 2,122.40 | 0.5088 | 2,612.29 | 1,021.66 | 19.68 | 5.081 | 0.283 | 0.85 |
+| 600 | 50% | 1,486.67 | 0.3783 | 1,849.42 | 698.54 | 47.71 | 2.096 | 0.404 | 1.29 |
+| 600 | 100% | **1,215.70** | **0.3232** | **1,524.26** | **558.96** | **92.33** | **0.131** | **0.494** | 2.11 |
+| 700 | 20% | 2,242.36 | 0.5381 | 2,756.24 | 1,159.95 | 19.83 | 5.044 | 0.312 | 0.73 |
+| 700 | 50% | 1,549.90 | 0.3958 | 1,925.29 | 794.79 | 48.85 | 2.047 | 0.452 | 1.86 |
+| 700 | 100% | **1,265.28** | **0.3380** | **1,583.74** | **637.46** | **95.33** | **0.092** | **0.553** | 1.28 |
+| 800 | 20% | 2,540.16 | 0.6094 | 3,113.60 | 1,312.54 | 19.80 | 5.051 | 0.315 | 1.10 |
+| 800 | 50% | 1,769.17 | 0.4510 | 2,188.41 | 898.54 | 48.47 | 2.063 | 0.452 | 1.71 |
+| 800 | 100% | **1,440.14** | **0.3842** | **1,793.59** | **721.09** | **94.32** | **0.107** | **0.555** | 1.71 |
+| 900 | 20% | 3,065.60 | 0.7359 | 3,744.13 | 1,461.48 | 19.88 | 5.031 | 0.294 | 0.86 |
+| 900 | 50% | 2,127.51 | 0.5433 | 2,618.43 | 1,000.69 | 48.70 | 2.053 | 0.423 | 2.19 |
+| 900 | 100% | **1,725.95** | **0.4617** | **2,136.55** | **802.66** | **95.22** | **0.088** | **0.521** | 1.77 |
+| 1,000 | 20% | 3,331.27 | 0.7990 | 4,062.94 | 1,602.00 | 19.76 | 5.060 | 0.300 | 2.61 |
+| 1,000 | 50% | 2,313.56 | 0.5900 | 2,841.69 | 1,097.82 | 48.48 | 2.063 | 0.432 | 10.08 |
+| 1,000 | 100% | **1,880.16** | **0.5020** | **2,321.60** | **881.11** | **94.40** | **0.099** | **0.532** | 6.15 |
 
-### 6.2 Synthetic 1.000–10.000 Task
+### 6.3 Hasil Synthetic 1,000–10,000 Task
 
 | Task | k | Makespan (s) | Energi (kWh) | Biaya (USD) | Avg response time (s) | Utilisasi (%) | Degree of Imbalance (20 VM) | Throughput (task/s) | Waktu penjadwalan (ms) |
 |---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1.000 | 20% | 3.368,71 | 0,8093 | 4.107,86 | 1.660,13 | 19,98 | 5,005 | 0,297 | 4,53 |
-| 1.000 | 50% | 2.342,94 | 0,5986 | 2.876,94 | 1.136,67 | 48,99 | 2,041 | 0,427 | 1,51 |
-| 1.000 | 100% | **1.898,59** | **0,5084** | **2.343,72** | **910,90** | **96,26** | **0,068** | **0,527** | 2,78 |
-| 2.000 | 20% | 6.555,52 | 1,5745 | 7.932,04 | 3.241,47 | 19,95 | 5,012 | 0,305 | 10,27 |
-| 2.000 | 50% | 4.509,15 | 1,1543 | 5.476,39 | 2.220,92 | 49,60 | 2,016 | 0,444 | 3,05 |
-| 2.000 | 100% | **3.641,61** | **0,9780** | **4.435,34** | **1.782,68** | **98,16** | **0,036** | **0,549** | 3,69 |
-| 3.000 | 20% | 9.889,06 | 2,3757 | 11.932,28 | 5.028,41 | 19,99 | 5,004 | 0,303 | 3,01 |
-| 3.000 | 50% | 6.813,39 | 1,7441 | 8.241,48 | 3.445,38 | 49,64 | 2,015 | 0,440 | 4,81 |
-| 3.000 | 100% | **5.498,37** | **1,4770** | **6.663,45** | **2.765,82** | **98,50** | **0,025** | **0,546** | 2,12 |
-| 4.000 | 20% | 13.569,76 | 3,2597 | 16.349,12 | 6.721,99 | 19,97 | 5,008 | 0,295 | 4,83 |
-| 4.000 | 50% | 9.318,29 | 2,3866 | 11.247,36 | 4.605,74 | 49,79 | 2,009 | 0,429 | 4,52 |
-| 4.000 | 100% | **7.508,90** | **2,0190** | **9.076,09** | **3.697,24** | **98,91** | **0,021** | **0,533** | 2,59 |
-| 5.000 | 20% | 16.102,78 | 3,8683 | 19.388,75 | 8.075,77 | 19,98 | 5,005 | 0,311 | 8,72 |
-| 5.000 | 50% | 11.067,06 | 2,8341 | 13.345,88 | 5.533,14 | 49,75 | 2,010 | 0,452 | 3,46 |
-| 5.000 | 100% | **8.921,40** | **2,3981** | **10.771,09** | **4.442,93** | **98,94** | **0,018** | **0,560** | 4,52 |
-| 6.000 | 20% | 20.023,90 | 4,8096 | 24.094,09 | 9.866,83 | 19,96 | 5,011 | 0,300 | 12,06 |
-| 6.000 | 50% | 13.757,33 | 3,5227 | 16.574,21 | 6.761,20 | 49,71 | 2,011 | 0,436 | 2,46 |
-| 6.000 | 100% | **11.075,99** | **2,9778** | **13.356,60** | **5.428,41** | **99,02** | **0,016** | **0,542** | 3,98 |
-| 7.000 | 20% | 23.317,97 | 5,6011 | 28.046,98 | 11.663,32 | 19,96 | 5,009 | 0,300 | 5,07 |
-| 7.000 | 50% | 16.024,55 | 4,1032 | 19.294,87 | 7.992,54 | 49,73 | 2,011 | 0,437 | 3,64 |
-| 7.000 | 100% | **12.906,13** | **3,4696** | **15.552,77** | **6.418,09** | **98,99** | **0,016** | **0,542** | 22,79 |
-| 8.000 | 20% | 26.319,90 | 6,3231 | 31.649,29 | 13.218,22 | 19,99 | 5,003 | 0,304 | 5,74 |
-| 8.000 | 50% | 18.082,98 | 4,6315 | 21.764,99 | 9.058,51 | 49,81 | 2,008 | 0,442 | 3,13 |
-| 8.000 | 100% | **14.541,63** | **3,9119** | **17.515,37** | **7.274,23** | **99,37** | **0,012** | **0,550** | 5,63 |
-| 9.000 | 20% | 29.835,18 | 7,1681 | 35.867,63 | 14.996,62 | 19,99 | 5,001 | 0,302 | 4,62 |
-| 9.000 | 50% | 20.484,53 | 5,2478 | 24.646,85 | 10.277,69 | 49,87 | 2,005 | 0,439 | 1,77 |
-| 9.000 | 100% | **16.479,34** | **4,4340** | **19.840,62** | **8.253,47** | **99,44** | **0,012** | **0,546** | 5,07 |
-| 10.000 | 20% | 32.947,10 | 7,9140 | 39.601,93 | 16.341,77 | 19,96 | 5,009 | 0,304 | 5,43 |
-| 10.000 | 50% | 22.637,46 | 5,7967 | 27.230,37 | 11.197,56 | 49,76 | 2,010 | 0,442 | 4,24 |
-| 10.000 | 100% | **18.233,23** | **4,9018** | **21.945,29** | **8.991,59** | **99,10** | **0,014** | **0,548** | 5,76 |
+| 1,000 | 20% | 3,368.71 | 0.8093 | 4,107.86 | 1,660.13 | 19.98 | 5.005 | 0.297 | 4.53 |
+| 1,000 | 50% | 2,342.94 | 0.5986 | 2,876.94 | 1,136.67 | 48.99 | 2.041 | 0.427 | 1.51 |
+| 1,000 | 100% | **1,898.59** | **0.5084** | **2,343.72** | **910.90** | **96.26** | **0.068** | **0.527** | 2.78 |
+| 2,000 | 20% | 6,555.52 | 1.5745 | 7,932.04 | 3,241.47 | 19.95 | 5.012 | 0.305 | 10.27 |
+| 2,000 | 50% | 4,509.15 | 1.1543 | 5,476.39 | 2,220.92 | 49.60 | 2.016 | 0.444 | 3.05 |
+| 2,000 | 100% | **3,641.61** | **0.9780** | **4,435.34** | **1,782.68** | **98.16** | **0.036** | **0.549** | 3.69 |
+| 3,000 | 20% | 9,889.06 | 2.3757 | 11,932.28 | 5,028.41 | 19.99 | 5.004 | 0.303 | 3.01 |
+| 3,000 | 50% | 6,813.39 | 1.7441 | 8,241.48 | 3,445.38 | 49.64 | 2.015 | 0.440 | 4.81 |
+| 3,000 | 100% | **5,498.37** | **1.4770** | **6,663.45** | **2,765.82** | **98.50** | **0.025** | **0.546** | 2.12 |
+| 4,000 | 20% | 13,569.76 | 3.2597 | 16,349.12 | 6,721.99 | 19.97 | 5.008 | 0.295 | 4.83 |
+| 4,000 | 50% | 9,318.29 | 2.3866 | 11,247.36 | 4,605.74 | 49.79 | 2.009 | 0.429 | 4.52 |
+| 4,000 | 100% | **7,508.90** | **2.0190** | **9,076.09** | **3,697.24** | **98.91** | **0.021** | **0.533** | 2.59 |
+| 5,000 | 20% | 16,102.78 | 3.8683 | 19,388.75 | 8,075.77 | 19.98 | 5.005 | 0.311 | 8.72 |
+| 5,000 | 50% | 11,067.06 | 2.8341 | 13,345.88 | 5,533.14 | 49.75 | 2.010 | 0.452 | 3.46 |
+| 5,000 | 100% | **8,921.40** | **2.3981** | **10,771.09** | **4,442.93** | **98.94** | **0.018** | **0.560** | 4.52 |
+| 6,000 | 20% | 20,023.90 | 4.8096 | 24,094.09 | 9,866.83 | 19.96 | 5.011 | 0.300 | 12.06 |
+| 6,000 | 50% | 13,757.33 | 3.5227 | 16,574.21 | 6,761.20 | 49.71 | 2.011 | 0.436 | 2.46 |
+| 6,000 | 100% | **11,075.99** | **2.9778** | **13,356.60** | **5,428.41** | **99.02** | **0.016** | **0.542** | 3.98 |
+| 7,000 | 20% | 23,317.97 | 5.6011 | 28,046.98 | 11,663.32 | 19.96 | 5.009 | 0.300 | 5.07 |
+| 7,000 | 50% | 16,024.55 | 4.1032 | 19,294.87 | 7,992.54 | 49.73 | 2.011 | 0.437 | 3.64 |
+| 7,000 | 100% | **12,906.13** | **3.4696** | **15,552.77** | **6,418.09** | **98.99** | **0.016** | **0.542** | 22.79 |
+| 8,000 | 20% | 26,319.90 | 6.3231 | 31,649.29 | 13,218.22 | 19.99 | 5.003 | 0.304 | 5.74 |
+| 8,000 | 50% | 18,082.98 | 4.6315 | 21,764.99 | 9,058.51 | 49.81 | 2.008 | 0.442 | 3.13 |
+| 8,000 | 100% | **14,541.63** | **3.9119** | **17,515.37** | **7,274.23** | **99.37** | **0.012** | **0.550** | 5.63 |
+| 9,000 | 20% | 29,835.18 | 7.1681 | 35,867.63 | 14,996.62 | 19.99 | 5.001 | 0.302 | 4.62 |
+| 9,000 | 50% | 20,484.53 | 5.2478 | 24,646.85 | 10,277.69 | 49.87 | 2.005 | 0.439 | 1.77 |
+| 9,000 | 100% | **16,479.34** | **4.4340** | **19,840.62** | **8,253.47** | **99.44** | **0.012** | **0.546** | 5.07 |
+| 10,000 | 20% | 32,947.10 | 7.9140 | 39,601.93 | 16,341.77 | 19.96 | 5.009 | 0.304 | 5.43 |
+| 10,000 | 50% | 22,637.46 | 5.7967 | 27,230.37 | 11,197.56 | 49.76 | 2.010 | 0.442 | 4.24 |
+| 10,000 | 100% | **18,233.23** | **4.9018** | **21,945.29** | **8,991.59** | **99.10** | **0.014** | **0.548** | 5.76 |
 
-### 6.3 Diagram Perbandingan
+### 6.4 Tabel Perbedaan antar k
 
-**Makespan vs jumlah task**
+Selisih = nilai k yang lebih besar dikurangi nilai k yang lebih kecil; persen relatif terhadap k yang lebih kecil (negatif = turun). Kolom terakhir adalah makespan CloudSim dibagi makespan rumus f1 desain (antrean sekuensial per VM, `max_j Σ L_i / C_j`).
+
+**GoCJ**
+
+| Task | Makespan k = 20% → 50% (s) | Makespan k = 50% → 100% (s) | Makespan k = 20% → 100% (s) | Energi k = 20% → 100% | Biaya k = 20% → 100% | Throughput k = 20% → 100% | CloudSim / analitik f1 (k = 20 / 50 / 100%) |
+|---:|---:|---:|---:|---:|---:|---:|:---:|
+| 50 | -38.25 (-18.0%) | -5.90 (-3.4%) | -44.15 (-20.7%) | -18.1% | -16.5% | 26.0% | 1.006 / 1.004 / 1.010 |
+| 100 | -94.45 (-25.7%) | -40.27 (-14.7%) | -134.72 (-36.6%) | -31.5% | -31.9% | 57.7% | 1.015 / 1.009 / 1.009 |
+| 200 | -192.66 (-27.0%) | -84.41 (-16.2%) | -277.07 (-38.8%) | -33.2% | -36.1% | 63.6% | 1.013 / 1.008 / 1.007 |
+| 300 | -310.13 (-28.4%) | -132.77 (-17.0%) | -442.90 (-40.6%) | -34.7% | -38.6% | 68.0% | 1.013 / 1.009 / 1.006 |
+| 400 | -409.85 (-31.0%) | -154.63 (-17.0%) | -564.48 (-42.7%) | -36.4% | -41.0% | 74.3% | 1.018 / 1.011 / 1.008 |
+| 500 | -509.19 (-30.8%) | -213.12 (-18.6%) | -722.31 (-43.6%) | -37.2% | -42.2% | 77.5% | 1.015 / 1.010 / 1.008 |
+| 600 | -635.73 (-30.0%) | -270.97 (-18.2%) | -906.70 (-42.7%) | -36.5% | -41.7% | 74.6% | 1.013 / 1.009 / 1.006 |
+| 700 | -692.46 (-30.9%) | -284.62 (-18.4%) | -977.08 (-43.6%) | -37.2% | -42.5% | 77.2% | 1.016 / 1.011 / 1.007 |
+| 800 | -770.99 (-30.4%) | -329.02 (-18.6%) | -1,100.02 (-43.3%) | -37.0% | -42.4% | 76.2% | 1.015 / 1.012 / 1.009 |
+| 900 | -938.09 (-30.6%) | -401.57 (-18.9%) | -1,339.65 (-43.7%) | -37.3% | -42.9% | 77.2% | 1.015 / 1.010 / 1.007 |
+| 1,000 | -1,017.71 (-30.6%) | -433.40 (-18.7%) | -1,451.11 (-43.6%) | -37.2% | -42.9% | 77.3% | 1.016 / 1.011 / 1.007 |
+
+**Synthetic**
+
+| Task | Makespan k = 20% → 50% (s) | Makespan k = 50% → 100% (s) | Makespan k = 20% → 100% (s) | Energi k = 20% → 100% | Biaya k = 20% → 100% | Throughput k = 20% → 100% | CloudSim / analitik f1 (k = 20 / 50 / 100%) |
+|---:|---:|---:|---:|---:|---:|---:|:---:|
+| 1,000 | -1,025.77 (-30.4%) | -444.35 (-19.0%) | -1,470.12 (-43.6%) | -37.2% | -42.9% | 77.4% | 1.015 / 1.010 / 1.008 |
+| 2,000 | -2,046.37 (-31.2%) | -867.54 (-19.2%) | -2,913.91 (-44.4%) | -37.9% | -44.1% | 80.0% | 1.015 / 1.011 / 1.007 |
+| 3,000 | -3,075.67 (-31.1%) | -1,315.02 (-19.3%) | -4,390.69 (-44.4%) | -37.8% | -44.2% | 80.2% | 1.016 / 1.010 / 1.007 |
+| 4,000 | -4,251.47 (-31.3%) | -1,809.39 (-19.4%) | -6,060.86 (-44.7%) | -38.1% | -44.5% | 80.7% | 1.015 / 1.009 / 1.007 |
+| 5,000 | -5,035.72 (-31.3%) | -2,145.66 (-19.4%) | -7,181.38 (-44.6%) | -38.0% | -44.4% | 80.1% | 1.016 / 1.010 / 1.009 |
+| 6,000 | -6,266.57 (-31.3%) | -2,681.34 (-19.5%) | -8,947.91 (-44.7%) | -38.1% | -44.6% | 80.7% | 1.015 / 1.010 / 1.008 |
+| 7,000 | -7,293.42 (-31.3%) | -3,118.42 (-19.5%) | -10,411.84 (-44.7%) | -38.1% | -44.5% | 80.7% | 1.015 / 1.010 / 1.008 |
+| 8,000 | -8,236.92 (-31.3%) | -3,541.35 (-19.6%) | -11,778.27 (-44.8%) | -38.1% | -44.7% | 80.9% | 1.015 / 1.011 / 1.008 |
+| 9,000 | -9,350.65 (-31.3%) | -4,005.19 (-19.6%) | -13,355.84 (-44.8%) | -38.1% | -44.7% | 80.8% | 1.015 / 1.010 / 1.008 |
+| 10,000 | -10,309.64 (-31.3%) | -4,404.23 (-19.5%) | -14,713.87 (-44.7%) | -38.1% | -44.6% | 80.3% | 1.015 / 1.010 / 1.009 |
+
+### 6.5 Diagram Perbandingan (Line Chart)
+
+Sumbu x pada semua diagram adalah jumlah task; satu garis per nilai k (warna dan bentuk penanda sama di semua diagram).
+
+**Makespan**
 
 ![Makespan KPB, GoCJ](docs/figures/gocj_makespan.png)
 
 ![Makespan KPB, Synthetic](docs/figures/synthetic_makespan.png)
+
+**Perbedaan makespan terhadap k = 20%** (garis putus-putus = batas kapasitas, lihat 6.6)
+
+![Selisih makespan, GoCJ](docs/figures/gocj_difference.png)
+
+![Selisih makespan, Synthetic](docs/figures/synthetic_difference.png)
 
 **Delapan metrik desain** (makespan, energi, biaya, avg response time, utilisasi, DI, throughput, waktu penjadwalan)
 
@@ -423,74 +504,79 @@ Keterangan kolom: energi mencakup 6 host dari t = 0 sampai makespan, termasuk da
 
 ![Delapan metrik, Synthetic](docs/figures/synthetic_metrics.png)
 
-Diagram dan tabel dibuat ulang dari `grid_summary.csv` dengan:
+Diagram dan semua tabel di bagian 6.2–6.6 dibuat ulang dari `grid_summary.csv` dengan:
 
 ```bash
 pip install matplotlib
 python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_20261009_225810 \
                              synthetic=results/sessions/cloudsim_synthetic_20261009_225854
-# -> docs/figures/<nama>_makespan.png, <nama>_metrics.png, <nama>_tables.md
+# -> docs/figures/<nama>_makespan.png, _difference.png, _metrics.png, _tables.md
 ```
 
-### 6.4 k = 100% vs k = 20% dan CloudSim vs Model Analitik
+### 6.6 Analisis: Kenapa Hasil Chart-nya Seperti Ini
 
-Kolom "CloudSim / analitik" adalah makespan CloudSim dibagi makespan rumus f1 desain (antrean sekuensial per VM, `max_j Σ L_i / C_j`).
+**Kunci penjelasan: subset k% selalu berisi VM yang sama.** Kecepatan VM hanya ditentukan tipenya (`ETC = L / C`), sehingga urutan VM tercepat sama untuk semua task (bagian 2.5). Akibatnya setiap k setara dengan sebuah "kolam" VM dengan kapasitas tetap:
+
+| k | VM yang dipakai | Kapasitas kolam C |
+|:---:|:---|---:|
+| 20% | 4 × V3 | 40,000 MIPS |
+| 50% | 4 × V3 + 6 × V2 | 58,000 MIPS |
+| 100% | 4 × V3 + 8 × V2 + 8 × V1 | 72,000 MIPS |
+
+Di dalam kolam, KPB memilih VM yang paling cepat menyelesaikan task (min CT), sehingga beban tersebar rata. Bila task cukup banyak, seluruh kolam sibuk sampai akhir dan dua rumus sederhana berlaku:
+
+- **makespan ≈ ΣL / C**, dengan ΣL = total panjang task (MI)
+- **throughput ≈ C / rata-rata L**
+
+Tabel berikut membandingkan kedua rumus itu dengan hasil CloudSim:
 
 **GoCJ**
 
-| Task | Makespan turun | Energi turun | Biaya turun | Throughput naik | CloudSim / analitik (k = 20 / 50 / 100%) |
-|---:|---:|---:|---:|---:|:---:|
-| 50 | 20,7% | 18,1% | 16,5% | 26,0% | 1,006 / 1,004 / 1,010 |
-| 100 | 36,6% | 31,5% | 31,9% | 57,7% | 1,015 / 1,009 / 1,009 |
-| 200 | 38,8% | 33,2% | 36,1% | 63,6% | 1,013 / 1,008 / 1,007 |
-| 300 | 40,6% | 34,7% | 38,6% | 68,0% | 1,013 / 1,009 / 1,006 |
-| 400 | 42,7% | 36,4% | 41,0% | 74,3% | 1,018 / 1,011 / 1,008 |
-| 500 | 43,6% | 37,2% | 42,2% | 77,5% | 1,015 / 1,010 / 1,008 |
-| 600 | 42,7% | 36,5% | 41,7% | 74,6% | 1,013 / 1,009 / 1,006 |
-| 700 | 43,6% | 37,2% | 42,5% | 77,2% | 1,016 / 1,011 / 1,007 |
-| 800 | 43,3% | 37,0% | 42,4% | 76,2% | 1,015 / 1,012 / 1,009 |
-| 900 | 43,7% | 37,3% | 42,9% | 77,2% | 1,015 / 1,010 / 1,007 |
-| 1.000 | 43,6% | 37,2% | 42,9% | 77,3% | 1,016 / 1,011 / 1,007 |
+| Task | Total panjang ΣL (MI) | Rata-rata L (MI) | Makespan ΣL / C (s), k = 20 / 50 / 100% | Makespan CloudSim (s) | Throughput C / rata-rata L (task/s) | Throughput CloudSim (task/s) |
+|---:|---:|---:|:---:|:---:|:---:|:---:|
+| 50 | 6,905,000 | 138,100 | 172.6 / 119.1 / 95.9 | 213.0 / 174.8 / 168.8 | 0.290 / 0.420 / 0.521 | 0.235 / 0.286 / 0.296 |
+| 100 | 13,509,500 | 135,095 | 337.7 / 232.9 / 187.6 | 367.8 / 273.3 / 233.1 | 0.296 / 0.429 / 0.533 | 0.272 / 0.366 / 0.429 |
+| 200 | 27,219,500 | 136,098 | 680.5 / 469.3 / 378.0 | 713.8 / 521.2 / 436.8 | 0.294 / 0.426 / 0.529 | 0.280 / 0.384 / 0.458 |
+| 300 | 41,526,000 | 138,420 | 1,038.2 / 716.0 / 576.8 | 1,091.5 / 781.4 / 648.7 | 0.289 / 0.419 / 0.520 | 0.275 / 0.384 / 0.462 |
+| 400 | 51,869,500 | 129,674 | 1,296.7 / 894.3 / 720.4 | 1,321.8 / 911.9 / 757.3 | 0.308 / 0.447 / 0.555 | 0.303 / 0.439 / 0.528 |
+| 500 | 65,001,500 | 130,003 | 1,625.0 / 1,120.7 / 902.8 | 1,655.4 / 1,146.2 / 933.1 | 0.308 / 0.446 / 0.554 | 0.302 / 0.436 / 0.536 |
+| 600 | 82,341,000 | 137,235 | 2,058.5 / 1,419.7 / 1,143.6 | 2,122.4 / 1,486.7 / 1,215.7 | 0.291 / 0.423 / 0.525 | 0.283 / 0.404 / 0.494 |
+| 700 | 87,493,500 | 124,991 | 2,187.3 / 1,508.5 / 1,215.2 | 2,242.4 / 1,549.9 / 1,265.3 | 0.320 / 0.464 / 0.576 | 0.312 / 0.452 / 0.553 |
+| 800 | 98,958,000 | 123,698 | 2,473.9 / 1,706.2 / 1,374.4 | 2,540.2 / 1,769.2 / 1,440.1 | 0.323 / 0.469 / 0.582 | 0.315 / 0.452 / 0.555 |
+| 900 | 120,047,000 | 133,386 | 3,001.2 / 2,069.8 / 1,667.3 | 3,065.6 / 2,127.5 / 1,725.9 | 0.300 / 0.435 / 0.540 | 0.294 / 0.423 / 0.521 |
+| 1,000 | 129,662,000 | 129,662 | 3,241.6 / 2,235.6 / 1,800.9 | 3,331.3 / 2,313.6 / 1,880.2 | 0.308 / 0.447 / 0.555 | 0.300 / 0.432 / 0.532 |
 
 **Synthetic**
 
-| Task | Makespan turun | Energi turun | Biaya turun | Throughput naik | CloudSim / analitik (k = 20 / 50 / 100%) |
-|---:|---:|---:|---:|---:|:---:|
-| 1.000 | 43,6% | 37,2% | 42,9% | 77,4% | 1,015 / 1,010 / 1,008 |
-| 2.000 | 44,4% | 37,9% | 44,1% | 80,0% | 1,015 / 1,011 / 1,007 |
-| 3.000 | 44,4% | 37,8% | 44,2% | 80,2% | 1,016 / 1,010 / 1,007 |
-| 4.000 | 44,7% | 38,1% | 44,5% | 80,7% | 1,015 / 1,009 / 1,007 |
-| 5.000 | 44,6% | 38,0% | 44,4% | 80,1% | 1,016 / 1,010 / 1,009 |
-| 6.000 | 44,7% | 38,1% | 44,6% | 80,7% | 1,015 / 1,010 / 1,008 |
-| 7.000 | 44,7% | 38,1% | 44,5% | 80,7% | 1,015 / 1,010 / 1,008 |
-| 8.000 | 44,8% | 38,1% | 44,7% | 80,9% | 1,015 / 1,011 / 1,008 |
-| 9.000 | 44,8% | 38,1% | 44,7% | 80,8% | 1,015 / 1,010 / 1,008 |
-| 10.000 | 44,7% | 38,1% | 44,6% | 80,3% | 1,015 / 1,010 / 1,009 |
+| Task | Total panjang ΣL (MI) | Rata-rata L (MI) | Makespan ΣL / C (s), k = 20 / 50 / 100% | Makespan CloudSim (s) | Throughput C / rata-rata L (task/s) | Throughput CloudSim (task/s) |
+|---:|---:|---:|:---:|:---:|:---:|:---:|
+| 1,000 | 132,584,000 | 132,584 | 3,314.6 / 2,285.9 / 1,841.4 | 3,368.7 / 2,342.9 / 1,898.6 | 0.302 / 0.437 / 0.543 | 0.297 / 0.427 / 0.527 |
+| 2,000 | 257,551,500 | 128,776 | 6,438.8 / 4,440.5 / 3,577.1 | 6,555.5 / 4,509.2 / 3,641.6 | 0.311 / 0.450 / 0.559 | 0.305 / 0.444 / 0.549 |
+| 3,000 | 389,238,000 | 129,746 | 9,731.0 / 6,711.0 / 5,406.1 | 9,889.1 / 6,813.4 / 5,498.4 | 0.308 / 0.447 / 0.555 | 0.303 / 0.440 / 0.546 |
+| 4,000 | 533,816,000 | 133,454 | 13,345.4 / 9,203.7 / 7,414.1 | 13,569.8 / 9,318.3 / 7,508.9 | 0.300 / 0.435 / 0.540 | 0.295 / 0.429 / 0.533 |
+| 5,000 | 633,350,000 | 126,670 | 15,833.8 / 10,919.8 / 8,796.5 | 16,102.8 / 11,067.1 / 8,921.4 | 0.316 / 0.458 / 0.568 | 0.311 / 0.452 / 0.560 |
+| 6,000 | 787,098,000 | 131,183 | 19,677.5 / 13,570.7 / 10,931.9 | 20,023.9 / 13,757.3 / 11,076.0 | 0.305 / 0.442 / 0.549 | 0.300 / 0.436 / 0.542 |
+| 7,000 | 916,815,000 | 130,974 | 22,920.4 / 15,807.2 / 12,733.5 | 23,318.0 / 16,024.6 / 12,906.1 | 0.305 / 0.443 / 0.550 | 0.300 / 0.437 / 0.542 |
+| 8,000 | 1,035,889,500 | 129,486 | 25,897.2 / 17,860.2 / 14,387.4 | 26,319.9 / 18,083.0 / 14,541.6 | 0.309 / 0.448 / 0.556 | 0.304 / 0.442 / 0.550 |
+| 9,000 | 1,174,900,000 | 130,544 | 29,372.5 / 20,256.9 / 16,318.1 | 29,835.2 / 20,484.5 / 16,479.3 | 0.306 / 0.444 / 0.552 | 0.302 / 0.439 / 0.546 |
+| 10,000 | 1,295,258,000 | 129,526 | 32,381.5 / 22,332.0 / 17,989.7 | 32,947.1 / 22,637.5 / 18,233.2 | 0.309 / 0.448 / 0.556 | 0.304 / 0.442 / 0.548 |
 
-### 6.5 Log Eksekusi
+Untuk Synthetic dan GoCJ ≥ 400 task, CloudSim hanya 1–4% di atas rumus kapasitas. Dari sini setiap chart bisa dijelaskan:
 
-```text
-$ mvn -q exec:java -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_500.txt 50"
-placement=vm0:V3@DC1/H0 vm1:V3@DC1/H1 vm2:V3@DC1/H2 vm3:V3@DC1/H0 vm4:V2@DC1/H1 ... vm19:V1@DC2/H0
-scheduler=KPB(k=50.0%)
-tasks=500, vmsCreated=20/20, cloudletsFinished=500/500
-makespan=1146.190 s (analitik 1134.700 s), energy=0.2930 kWh, avgResponse=565.906 s
-utilization=48.99%, DI=2.0411 (VM terpakai 0.0371), throughput=0.4362 task/s
-cost=$1440.84, schedulingTime=1.182 ms
-mapping=[0, 1, 2, 3, 0, 1, 2, 2, 3, 1, 0, 1, 4, 3, 5, 6, 7, 2, 8, 9, ...]
-```
+1. **Makespan naik lurus, dengan k = 20% paling curam.** Karena makespan ≈ ΣL / C dan rata-rata L hampir konstan (±130,000 MI), makespan naik linear terhadap jumlah task. Kemiringannya = rata-rata L / C: ±3.3 s per task (k = 20%), ±2.3 s (k = 50%), dan ±1.8 s (k = 100%). Itulah sebabnya ketiga garis makin menjauh saat task bertambah. Pada GoCJ garisnya berbentuk "tangga" karena total MI tiap file tidak sebanding dengan jumlah task (bagian 5): GoCJ 600 naik 27% dari GoCJ 500, sedangkan GoCJ 700 hanya naik 6%. Garis Synthetic lebih mulus karena komposisi task-nya seragam (bootstrap dari pool yang sama).
+2. **Selisih makespan naik lalu mendatar di ±31% dan ±44%.** Batas atasnya adalah 1 − C(k = 20%) / C(k): 1 − 40,000/58,000 = 31.0% untuk k = 50%, dan 1 − 40,000/72,000 = 44.4% untuk k = 100%. Synthetic sedikit di atas batas (31.3% dan 44.7%) karena overhead CloudSim terhadap f1 pada k = 20% (1.015×) sedikit lebih besar daripada pada k = 100% (1.008×). Pada task sedikit (GoCJ 50–300), selisihnya lebih kecil (18–41%). Makespan dibatasi oleh beberapa task raksasa (hingga 900,000 MI = 90 s, bahkan di V3 tercepat), dan beban tidak bisa dibagi rata ke kolam. Pada GoCJ 50, makespan CloudSim k = 100% (168.8 s) jauh di atas ΣL / C (95.9 s), dan hanya 15 dari 20 VM yang terpakai.
+3. **Energi mengikuti makespan, tetapi turunnya lebih kecil (±38% vs ±45%).** Energi = daya idle × makespan + energi dinamis. Daya idle keenam host konstan 3 × 175 + 3 × 72 = 741 W selama makespan, karena semua host tetap menyala. Energi dinamis sebanding dengan total kerja ΣL (±0.0031 J per MI) dan hampir sama untuk semua k, karena task yang dikerjakan sama. Contoh Synthetic 10,000: idle 741 W × 32,947 s = 6.78 kWh ditambah dinamis ±1.13 kWh = 7.91 kWh untuk k = 20%, dan 741 W × 18,233 s = 3.75 kWh ditambah ±1.15 kWh = 4.90 kWh untuk k = 100%. Hanya bagian idle yang mengecil, sehingga penurunan energi lebih kecil dari penurunan makespan.
+4. **Biaya sejajar dengan makespan.** Biaya CPU `VmCost` = tarif per detik × umur VM, dan ke-20 VM hidup sepanjang simulasi. Akibatnya biaya ≈ 1.20 USD per detik makespan untuk semua k (Synthetic 10,000: 39,601.93 / 32,947 s dan 21,945.29 / 18,233 s). Penurunannya (44.6%) hampir sama dengan makespan (44.7%).
+5. **Avg response time ≈ setengah makespan.** Semua task tiba di t = 0 dan selesai tersebar merata dari awal sampai akhir antrean, sehingga rata-rata waktu selesai ≈ makespan / 2 (Synthetic 10,000: 16,341.77 / 32,947.10 = 0.50 untuk k = 20%, dan 0.49 untuk k = 100%). Grafiknya karena itu berbentuk sama dengan makespan.
+6. **Utilisasi mendatar di ±20%, ±50%, dan ±99%.** Utilisasi = Σ waktu sibuk VM / (20 × makespan). Hanya s = ⌈k% × 20⌉ VM yang pernah dipakai, dan semuanya sibuk hampir sampai akhir (lihat `vmFinish` di log 6.1: empat VM V3 selesai di 32,859–32,947 s, enam belas lainnya 0). Utilisasi ≈ s / 20 = 4/20, 10/20, dan 20/20. Garis k = 100% lebih rendah pada GoCJ kecil (37.5% pada 50 task) karena tidak semua VM sempat terisi.
+7. **DI mendatar di 5, 2, dan ±0.** DI dihitung atas 20 VM. Bila s VM selesai di ±T dan sisanya 0, DI = (T − 0) / (s × T / 20) = 20 / s, yaitu 20/4 = 5 untuk k = 20% dan 20/10 = 2 untuk k = 50%. Untuk k = 100% semua VM selesai hampir bersamaan, sehingga DI mendekati 0 (0.01–0.13). Jadi DI tinggi pada k kecil berasal dari VM yang sengaja tidak dipakai, bukan dari beban yang timpang di VM yang dipakai (DI atas VM terpakai: 0.003 pada contoh log).
+8. **Throughput mendatar di ±0.30 / ±0.44 / ±0.55 task/s.** Throughput = task / makespan ≈ C / rata-rata L, sehingga tidak bergantung pada jumlah task dan grafiknya datar. Zig-zag pada GoCJ mengikuti rata-rata L tiap file: GoCJ 700–800 (rata-rata ±124,000 MI) lebih tinggi, sedangkan GoCJ 600 (±137,000 MI) lebih rendah.
+9. **Waktu penjadwalan naik-turun tanpa pola.** Nilainya hanya 0.1–23 ms dan diukur dengan jam dinding, sehingga didominasi noise JIT/garbage collector Java, bukan kompleksitas KPB O(N · M log M) dengan M = 20. Satu-satunya tren yang terlihat adalah 10,000 task tetap selesai dijadwalkan dalam ≤ 23 ms.
 
-Log setiap run grid ada di folder sesi, `log_n<N>_k<K>_r1.txt`.
-
-### 6.6 Analisis Simulasi
-
-1. **k = 100% memberi makespan terendah di semua 21 ukuran dataset.** Dibanding k = 20%, makespan turun 20,7% pada GoCJ 50, 36,6% pada GoCJ 100, lalu stabil di 42,7–44,8% mulai 400 task (GoCJ) sampai 10.000 task (Synthetic). Urutan k = 100% < 50% < 20% tidak pernah terbalik.
-2. **Keunggulan k besar makin terasa saat task makin banyak, lalu jenuh.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (hingga 900.000 MI), sehingga tambahan VM lambat kurang membantu; pada GoCJ 50, k = 100% hanya memakai 15 dari 20 VM. Mulai ±400 task, semua VM kandidat selalu sibuk dan rasio makespan k = 100% : k = 20% mendekati rasio kapasitas, yaitu 40.000 MIPS (4 V3) : 72.000 MIPS (20 VM).
-3. **Makespan, energi, biaya, dan avg response naik hampir linear terhadap jumlah task** (terlihat jelas pada Synthetic, yang komposisi task-nya seragam). Pada GoCJ, kenaikannya mengikuti total MI tiap file, bukan jumlah task (bagian 5).
-4. **Utilisasi dan DI ditentukan oleh k.** k = 20% hanya memakai 4 VM V3 (utilisasi ±20%, DI ±5), k = 50% memakai 10 VM (±49%, DI ±2), dan k = 100% memakai 20 VM (94–99% dan DI 0,02–0,13 untuk ≥ 400 task). Throughput ikut stabil: ±0,30 / ±0,44 / ±0,54 task/s.
-5. **Energi dan biaya juga terendah pada k = 100%**, turun 31–38% (energi) dan 32–45% (biaya) dibanding k = 20% untuk ≥ 100 task. Keenam host tetap menyala, sehingga energi idle mendominasi dan energi mengikuti makespan.
-6. **CloudSim sangat dekat dengan model analitik:** 0,4–1,8% di atas f1 di semua 63 run, karena setiap Cloudlet memakai seluruh PE VM tujuan dan scheduler `SpaceShared`.
-7. **Waktu penjadwalan tetap kecil.** KPB menjadwalkan 1.000 task dalam ≤ 10 ms dan 10.000 task dalam ≤ 23 ms (kompleksitas O(N · M log M)).
+**Kesimpulan bagian 6.**
+- k = 100% memberi makespan, energi, biaya, response time, utilisasi, DI, dan throughput terbaik di semua 21 ukuran dataset.
+- Keunggulannya bisa dihitung di awal: 1 − 40,000 / 72,000 = 44.4% lebih cepat dari k = 20% bila task cukup banyak.
+- Pada desain dengan heterogenitas konsisten ini, k hanya menentukan berapa besar kapasitas yang boleh dipakai. Membatasi k tidak memberi keuntungan pada metrik mana pun, karena semua host tetap menyala.
 
 ---
 
@@ -502,18 +588,18 @@ Di simulasi, CloudSim *menghitung* eksekusi cloudlet. Di real world, task GoCJ y
 
 ```mermaid
 flowchart LR
-    DS["GoCJ Dataset<br/>100 / 500 / 1.000 task"] --> S
+    DS["GoCJ Dataset<br/>100 / 500 / 1,000 task"] --> S
 
     subgraph HOST["Host fisik (WSL2 · Intel Core Ultra 7 155H)"]
         S["kpb_realworld.py<br/>1. KPB → mapping<br/>2. 1 batch per VM<br/>3. ukur waktu selesai<br/>4. 8 metrik → CSV"]
     end
 
     subgraph NET1["Jaringan soka_dc1_performance (DC-1)"]
-        A["Host A0–A2<br/>vm00–vm03 V3 · 4 PE × 0,25 CPU<br/>vm04–vm07 V2 · 2 PE × 0,15 CPU"]
+        A["Host A0–A2<br/>vm00–vm03 V3 · 4 PE × 0.25 CPU<br/>vm04–vm07 V2 · 2 PE × 0.15 CPU"]
     end
 
     subgraph NET2["Jaringan soka_dc2_efficiency (DC-2)"]
-        B["Host B0–B2<br/>vm08–vm11 V2 · 2 PE × 0,15 CPU<br/>vm12–vm19 V1 · 1 PE × 0,10 CPU"]
+        B["Host B0–B2<br/>vm08–vm11 V2 · 2 PE × 0.15 CPU<br/>vm12–vm19 V1 · 1 PE × 0.10 CPU"]
     end
 
     S -->|"POST /batch {t0, tasks}"| A
@@ -532,15 +618,15 @@ flowchart LR
 
 | Konsep desain / CloudSim | Real world |
 |:---|:---|
-| Skala MIPS | 1,0 CPU container = 10.000 MIPS |
-| VM V3 (4 PE × 2.500) | Container 1,0 CPU dengan 4 proses PE, masing-masing ≤ 0,25 CPU |
-| VM V2 (2 PE × 1.500) | Container 0,3 CPU dengan 2 proses PE, masing-masing ≤ 0,15 CPU |
-| VM V1 (1 PE × 1.000) | Container 0,1 CPU dengan 1 proses PE |
+| Skala MIPS | 1.0 CPU container = 10,000 MIPS |
+| VM V3 (4 PE × 2,500) | Container 1.0 CPU dengan 4 proses PE, masing-masing ≤ 0.25 CPU |
+| VM V2 (2 PE × 1,500) | Container 0.3 CPU dengan 2 proses PE, masing-masing ≤ 0.15 CPU |
+| VM V1 (1 PE × 1,000) | Container 0.1 CPU dengan 1 proses PE |
 | RAM VM (8 / 4 / 2 GB) | `mem_limit` container 8g / 4g / 2g |
 | DC-1 / DC-2 | Jaringan Docker `soka_dc1_performance` / `soka_dc2_efficiency` |
 | Host & penempatan VM | Label `soka.host`, sama dengan `results/simulation/placement.csv` (dicek otomatis setiap run) |
 | Cloudlet 1 PE, `L_i` MI | `L_i × 14` iterasi CPU, dikerjakan oleh **satu** PE pada satu waktu |
-| `CloudletSchedulerTimeShared` | Semua task di satu VM aktif bersamaan dan bergiliran per *chunk* (50.000 iterasi) di PE yang tersedia |
+| `CloudletSchedulerTimeShared` | Semua task di satu VM aktif bersamaan dan bergiliran per *chunk* (50,000 iterasi) di PE yang tersedia |
 | Makespan, response time | Waktu selesai task (jam *monotonic* bersama host–container) dihitung dari t0 batch |
 | Energi (`PowerModelHostSimple`) | Model daya desain diterapkan pada CPU yang **diukur** dari cgroup tiap container, dikelompokkan per host |
 | Biaya (`VmCost`) | Rumus yang sama dengan CloudSim, dengan umur VM = makespan nyata |
@@ -646,7 +732,7 @@ python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_50
 python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_1000.txt --k 100
 ```
 
-**Grid real-world GoCJ 50–1.000** (11 ukuran × 3 k × 3 repetisi = 99 run, urutan acak, `scale` dan `itersPerMI` dikunci, `docker stats` direkam, lalu direkap oleh `analyze_grid.py`):
+**Grid real-world GoCJ 50–1,000** (11 ukuran × 3 k × 3 repetisi = 99 run, urutan acak, `scale` dan `itersPerMI` dikunci, `docker stats` direkam, lalu direkap oleh `analyze_grid.py`):
 
 ```bash
 bash run_grid.sh                                  # GoCJ 50..1000, 3 repetisi (beberapa jam)
@@ -773,51 +859,51 @@ rata-rata ± std dari 3 run:
 
 **Environment:** Docker 29.8 di WSL2, Intel Core Ultra 7 155H (6 P-core + 8 E-core + 2 LP-E core, 22 thread), 8 GB RAM. Nilai berikut adalah hasil run final (1 run per konfigurasi, dijalankan berurutan dalam satu sesi). Semua task selesai tanpa kegagalan, dan penempatan VM selalu cocok dengan CloudSim. Data mentah ada di [`realworld/results/aggregate.csv`](realworld/results/aggregate.csv) (baris dengan `runs=1`, 2026-10-03).
 
-> Pengujian awal memakai 3 repetisi per konfigurasi untuk mendapat std; hasilnya stabil di S1–S2 tapi tidak stabil di S3 (std makespan sampai ±23,5 s) akibat thermal throttling laptop. Tabel di bawah ini adalah run susulan yang paling valid, dilakukan setelah itu dalam kondisi laptop lebih terkontrol. Data 3 repetisi awal tetap ada di `aggregate.csv` (baris `runs=3`) dan dibahas di bagian 7.7 (Anomali).
+> Pengujian awal memakai 3 repetisi per konfigurasi untuk mendapat std; hasilnya stabil di S1–S2 tapi tidak stabil di S3 (std makespan sampai ±23.5 s) akibat thermal throttling laptop. Tabel di bawah ini adalah run susulan yang paling valid, dilakukan setelah itu dalam kondisi laptop lebih terkontrol. Data 3 repetisi awal tetap ada di `aggregate.csv` (baris `runs=3`) dan dibahas di bagian 7.7 (Anomali).
 
 | Skenario | k | Makespan (s) | Energi (kWh) | Avg response (s) | Utilisasi | DI (semua VM / terpakai) | Throughput (task/s) | Biaya (USD) | Waktu penjadwalan |
 |:---:|:---:|---:|---:|---:|---:|:---:|---:|---:|---:|
-| S1 (100) | 20% | 15,02 | 0,00344 | 5,77 | 18,8% | 5,31 / 0,17 | 6,66 | 83,31 | 0,61 ms |
-| S1 (100) | 50% | **12,25** | **0,00287** | 5,00 | 33,7% | 2,97 / 0,80 | 8,16 | **79,98** | 0,63 ms |
-| S1 (100) | 100% | 13,27 | 0,00310 | **4,31** | 44,1% | 1,67 / 1,67 | 7,54 | 81,20 | 0,61 ms |
-| S2 (500) | 20% | 53,90 | 0,01276 | 26,53 | 18,6% | 5,38 / 0,11 | 9,28 | 129,96 | 2,58 ms |
-| S2 (500) | 50% | 50,26 | 0,01262 | 29,86 | 45,1% | 2,22 / 0,16 | 9,95 | 125,59 | 1,70 ms |
-| S2 (500) | 100% | **42,09** | **0,01097** | 26,45 | 86,0% | 0,27 / 0,27 | 11,88 | **115,79** | 2,89 ms |
-| S3 (1.000) | 20% | 106,90 | 0,02556 | 58,98 | 19,3% | 5,19 / 0,06 | 9,35 | 193,55 | 5,50 ms |
-| S3 (1.000) | 50% | 96,61 | 0,02449 | 61,47 | 47,2% | 2,12 / 0,08 | 10,35 | 181,21 | 7,23 ms |
-| S3 (1.000) | 100% | **80,74** | **0,02139** | **55,26** | 91,8% | 0,13 / 0,13 | **12,38** | **162,17** | 7,10 ms |
+| S1 (100) | 20% | 15.02 | 0.00344 | 5.77 | 18.8% | 5.31 / 0.17 | 6.66 | 83.31 | 0.61 ms |
+| S1 (100) | 50% | **12.25** | **0.00287** | 5.00 | 33.7% | 2.97 / 0.80 | 8.16 | **79.98** | 0.63 ms |
+| S1 (100) | 100% | 13.27 | 0.00310 | **4.31** | 44.1% | 1.67 / 1.67 | 7.54 | 81.20 | 0.61 ms |
+| S2 (500) | 20% | 53.90 | 0.01276 | 26.53 | 18.6% | 5.38 / 0.11 | 9.28 | 129.96 | 2.58 ms |
+| S2 (500) | 50% | 50.26 | 0.01262 | 29.86 | 45.1% | 2.22 / 0.16 | 9.95 | 125.59 | 1.70 ms |
+| S2 (500) | 100% | **42.09** | **0.01097** | 26.45 | 86.0% | 0.27 / 0.27 | 11.88 | **115.79** | 2.89 ms |
+| S3 (1,000) | 20% | 106.90 | 0.02556 | 58.98 | 19.3% | 5.19 / 0.06 | 9.35 | 193.55 | 5.50 ms |
+| S3 (1,000) | 50% | 96.61 | 0.02449 | 61.47 | 47.2% | 2.12 / 0.08 | 10.35 | 181.21 | 7.23 ms |
+| S3 (1,000) | 100% | **80.74** | **0.02139** | **55.26** | 91.8% | 0.13 / 0.13 | **12.38** | **162.17** | 7.10 ms |
 
-DI dihitung dua cara: atas seluruh 20 VM (sesuai definisi desain, dipakai di bagian 6.1–6.2) dan hanya atas VM yang terpakai (dalam kurung di output program). Pada k = 100%, keduanya sama karena semua VM terpakai. Energi dan biaya di real world dihitung untuk durasi nyata (detik), jauh lebih kecil daripada simulasi (berskala ±40× lebih lama) — yang bisa dibandingkan adalah **trennya**, bukan angka mutlaknya.
+DI dihitung dua cara: atas seluruh 20 VM (sesuai definisi desain, dipakai di bagian 6.2–6.3) dan hanya atas VM yang terpakai (dalam kurung di output program). Pada k = 100%, keduanya sama karena semua VM terpakai. Energi dan biaya di real world dihitung untuk durasi nyata (detik), jauh lebih kecil daripada simulasi (berskala ±40× lebih lama) — yang bisa dibandingkan adalah **trennya**, bukan angka mutlaknya.
 
 **Real world vs CloudSim.** Prediksi = makespan analitik f1 (lihat kolom CloudSim / analitik, tabel 6.4) × `scale`, karena real world tidak meniru RAM/BW 20% per task (lihat 7.6).
 
 | Skenario | k | Prediksi dari CloudSim (s) | Nyata (s) | Nyata / prediksi | Proses PE aktif |
 |:---:|:---:|---:|---:|:---:|:---:|
-| S1 (100) | 20% | 11,8 | 15,02 | 1,27× | 16 |
-| S1 (100) | 50% | 9,5 | 12,25 | 1,29× | 28 |
-| S1 (100) | 100% | 7,6 | 13,27 | 1,74× | 40 |
-| S2 (500) | 20% | 54,5 | 53,90 | 0,99× | 16 |
-| S2 (500) | 50% | 35,1 | 50,26 | 1,43× | 28 |
-| S2 (500) | 100% | 28,2 | 42,09 | 1,49× | 40 |
-| S3 (1.000) | 20% | 105,8 | 106,90 | 1,01× | 16 |
-| S3 (1.000) | 50% | 77,3 | 96,61 | 1,25× | 28 |
-| S3 (1.000) | 100% | 62,2 | 80,74 | 1,30× | 40 |
+| S1 (100) | 20% | 11.8 | 15.02 | 1.27× | 16 |
+| S1 (100) | 50% | 9.5 | 12.25 | 1.29× | 28 |
+| S1 (100) | 100% | 7.6 | 13.27 | 1.74× | 40 |
+| S2 (500) | 20% | 54.5 | 53.90 | 0.99× | 16 |
+| S2 (500) | 50% | 35.1 | 50.26 | 1.43× | 28 |
+| S2 (500) | 100% | 28.2 | 42.09 | 1.49× | 40 |
+| S3 (1,000) | 20% | 105.8 | 106.90 | 1.01× | 16 |
+| S3 (1,000) | 50% | 77.3 | 96.61 | 1.25× | 28 |
+| S3 (1,000) | 100% | 62.2 | 80.74 | 1.30× | 40 |
 
-**Grid real-world GoCJ 50–1.000 (feedback).** Sesi `realworld/results/sessions/gocj_20261009_230602/` (`run_grid.sh`, 99 run) berhenti setelah 37 run, sehingga sebagian sel belum punya data. Karena itu hasilnya belum ditampilkan di sini; hasil feedback (GoCJ 50–1.000 dan Synthetic 1.000–10.000) saat ini berasal dari CloudSim (bagian 6).
+**Grid real-world GoCJ 50–1,000 (feedback).** Sesi `realworld/results/sessions/gocj_20261009_230602/` (`run_grid.sh`, 99 run) berhenti setelah 37 run, sehingga sebagian sel belum punya data. Karena itu hasilnya belum ditampilkan di sini; hasil feedback (GoCJ 50–1,000 dan Synthetic 1,000–10,000) saat ini berasal dari CloudSim (bagian 6).
 
 ### 7.5 Analisis Real-World
 
-1. **Perilaku KPB terkonfirmasi.** Jumlah VM terpakai selalu sama dengan `s = ⌈k% × 20⌉` (utilisasi ~19% / ~45% / ~90% pada S2–S3), dan DI atas VM terpakai kecil untuk k = 20–50% (0,06–0,80). Penempatan VM, batas PE, dan time-sharing berjalan seperti di CloudSim.
-2. **k = 100% paling cepat di S2 dan S3, sejalan dengan simulasi (bagian 6.1 dan 6.6).** Di S2, 21,9% lebih cepat dari k = 20% (42,09 s vs 53,90 s); di S3, 24,5% lebih cepat (80,74 s vs 106,90 s). Energi, biaya, dan throughput juga paling baik di k = 100% pada kedua skenario itu.
-3. **Pada S1, k = 50% justru sedikit lebih cepat dari k = 100%** (12,25 s vs 13,27 s) — kebalikan dari simulasi, yang tetap menunjukkan k = 100% tercepat (233,08 s vs 273,35 s pada k = 50%). Penyebabnya adalah efek penempatan pada task raksasa, bukan k = 50% yang lebih baik secara umum (lihat 7.7, bagian Anomali).
-4. **Rasio nyata/prediksi naik seiring makin banyak proses PE aktif** (16 → 28 → 40), dari ±1,0–1,3× menjadi ±1,3–1,7×. Laptop memakai CPU hybrid; makin banyak proses aktif, makin banyak yang terpaksa berjalan di E-core dan LP-E core yang lebih lambat. Overhead ini **tidak sampai membalik urutan** pada run final, berbeda dengan pengujian 3-repetisi awal di S3 yang sempat kena thermal throttling (lihat 7.7, bagian Anomali) — bukti bahwa overhead CPU hybrid konsisten ada, tapi besarnya bergantung kondisi laptop saat itu.
+1. **Perilaku KPB terkonfirmasi.** Jumlah VM terpakai selalu sama dengan `s = ⌈k% × 20⌉` (utilisasi ~19% / ~45% / ~90% pada S2–S3), dan DI atas VM terpakai kecil untuk k = 20–50% (0.06–0.80). Penempatan VM, batas PE, dan time-sharing berjalan seperti di CloudSim.
+2. **k = 100% paling cepat di S2 dan S3, sejalan dengan simulasi (bagian 6.2 dan 6.6).** Di S2, 21.9% lebih cepat dari k = 20% (42.09 s vs 53.90 s); di S3, 24.5% lebih cepat (80.74 s vs 106.90 s). Energi, biaya, dan throughput juga paling baik di k = 100% pada kedua skenario itu.
+3. **Pada S1, k = 50% justru sedikit lebih cepat dari k = 100%** (12.25 s vs 13.27 s) — kebalikan dari simulasi, yang tetap menunjukkan k = 100% tercepat (233.08 s vs 273.35 s pada k = 50%). Penyebabnya adalah efek penempatan pada task raksasa, bukan k = 50% yang lebih baik secara umum (lihat 7.7, bagian Anomali).
+4. **Rasio nyata/prediksi naik seiring makin banyak proses PE aktif** (16 → 28 → 40), dari ±1.0–1.3× menjadi ±1.3–1.7×. Laptop memakai CPU hybrid; makin banyak proses aktif, makin banyak yang terpaksa berjalan di E-core dan LP-E core yang lebih lambat. Overhead ini **tidak sampai membalik urutan** pada run final, berbeda dengan pengujian 3-repetisi awal di S3 yang sempat kena thermal throttling (lihat 7.7, bagian Anomali) — bukti bahwa overhead CPU hybrid konsisten ada, tapi besarnya bergantung kondisi laptop saat itu.
 5. **Biaya dan energi mengikuti makespan.** Karena semua VM dan host dihitung menyala selama makespan, konfigurasi yang paling cepat selalu paling hemat energi dan biaya. Kesimpulannya sama dengan simulasi (bagian 6.6).
-6. **Waktu penjadwalan tetap kecil.** KPB di Python menjadwalkan 1.000 task dalam ~5–7 ms.
+6. **Waktu penjadwalan tetap kecil.** KPB di Python menjadwalkan 1,000 task dalam ~5–7 ms.
 
 ### 7.6 Batasan Real-World
 
 - **Container adalah proksi VM, dan host hanyalah label.** Ke-20 container berbagi satu CPU laptop, sehingga ada interferensi (P-core vs E-core, thermal) yang tidak ada di CloudSim.
-- **RAM/BW 20% per task tidak ditiru.** Meniru 20% RAM VM per task (V3: 1,6 GB × ratusan task bersamaan) mustahil di laptop 8 GB. Karena itu, pembanding yang adil adalah makespan analitik f1 (tabel 6.4), bukan hasil CloudSim utama.
+- **RAM/BW 20% per task tidak ditiru.** Meniru 20% RAM VM per task (V3: 1.6 GB × ratusan task bersamaan) mustahil di laptop 8 GB. Karena itu, pembanding yang adil adalah makespan analitik f1 (tabel 6.4), bukan hasil CloudSim utama.
 - **Bandwidth dan transfer file 300 KB tidak ditiru.** Container tidak dibatasi bandwidth jaringannya.
 - **Energi adalah estimasi**: model daya desain diterapkan pada CPU terukur dari cgroup. Tidak ada power meter atau RAPL di WSL2.
 - **Repetisi**: tabel 7.4 memakai 1 run per konfigurasi (run final, paling valid). Pengujian awal memakai 3 repetisi (bukan 10× seperti protokol desain, supaya selesai dalam ±30 menit), yang mengungkap ketidakstabilan di S3 — dibahas di 7.7.
@@ -836,17 +922,17 @@ Ringkasan dari hasil 7.4, ditambah dua temuan yang tidak langsung terlihat dari 
 
 #### Temuan utama
 
-- Pada **500 dan 1000 task** (tabel 7.4), k = 100% selalu paling cepat: **21,9%** dan **24,5%** lebih cepat dari k = 20%.
+- Pada **500 dan 1000 task** (tabel 7.4), k = 100% selalu paling cepat: **21.9%** dan **24.5%** lebih cepat dari k = 20%.
 - Keunggulan k = 100% **makin besar saat task makin banyak**. Antrean di V3 jadi panjang, jadi lebih efisien kalau V2 dan V1 ikut bekerja walaupun lebih lambat (seperti membuka semua kasir supermarket, bukan hanya kasir tercepat).
 - **Energi dan cost ikut turun**, tetapi itu karena makespan lebih pendek (semua host tetap menyala selama pengujian), bukan keunggulan terpisah.
 - Pola hasil real-world **sejalan dengan simulasi CloudSim**, dan penempatan task identik di kedua fase karena memakai kode scheduler yang sama (bagian 7.3 Langkah 8).
 
 #### Anomali
 
-- **100 task: k = 50% lebih cepat dari k = 100%.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (900.000 MI). Di k = 100%, task 900.000 MI kebetulan berjalan sendirian di akhir sehingga paling lama selesai. Ini efek penempatan, bukan karena k = 50% lebih baik, dan polanya hilang di 500/1000 task.
-- **Model satu-PE tetap berlaku untuk runner Docker, bukan CloudSim.** Worker Docker menjalankan satu task pada satu PE; karena itu V3 dapat menyisakan PE ketika task yang aktif kurang dari empat. Di CloudSim masalah satu-PE sudah diperbaiki: setiap Cloudlet memakai seluruh PE VM tujuan. Grid CloudSim (63 run) menunjukkan makespan hanya 0,4–1,8% di atas f1 (bagian 6.4).
-- **Pengujian awal (3 repetisi) untuk 1000 task tidak stabil** (std makespan sampai ±23,5 s, urutan sempat tidak sesuai teori — data ini ada di `realworld/results/aggregate.csv` baris `runs=3`, bukan di tabel 7.4). Setelah diuji ulang dalam kondisi laptop yang lebih terkontrol (tabel 7.4, baris `runs=1`), hasilnya kembali sesuai teori. Dugaan penyebab: beban laptop, suhu, dan CPU hybrid (core cepat + core lambat) — lihat bagian 7.6.
-- **Keunggulan k = 100% lebih kecil dari teori** (1,3× di S3 vs perkiraan ~2× berdasarkan rasio MIPS). Dugaan: saat 20 container aktif bersamaan, sebagian tetap berjalan di core laptop yang lebih lambat (lihat rasio nyata/prediksi di tabel 7.4, naik seiring jumlah proses PE aktif). Artinya hasil ini cenderung **konservatif** — di infrastruktur fisik sungguhan (bukan laptop berbagi satu CPU), keunggulan k = 100% kemungkinan lebih besar lagi.
+- **100 task: k = 50% lebih cepat dari k = 100%.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (900,000 MI). Di k = 100%, task 900,000 MI kebetulan berjalan sendirian di akhir sehingga paling lama selesai. Ini efek penempatan, bukan karena k = 50% lebih baik, dan polanya hilang di 500/1000 task.
+- **Model satu-PE tetap berlaku untuk runner Docker, bukan CloudSim.** Worker Docker menjalankan satu task pada satu PE; karena itu V3 dapat menyisakan PE ketika task yang aktif kurang dari empat. Di CloudSim masalah satu-PE sudah diperbaiki: setiap Cloudlet memakai seluruh PE VM tujuan. Grid CloudSim (63 run) menunjukkan makespan hanya 0.4–1.8% di atas f1 (bagian 6.4).
+- **Pengujian awal (3 repetisi) untuk 1000 task tidak stabil** (std makespan sampai ±23.5 s, urutan sempat tidak sesuai teori — data ini ada di `realworld/results/aggregate.csv` baris `runs=3`, bukan di tabel 7.4). Setelah diuji ulang dalam kondisi laptop yang lebih terkontrol (tabel 7.4, baris `runs=1`), hasilnya kembali sesuai teori. Dugaan penyebab: beban laptop, suhu, dan CPU hybrid (core cepat + core lambat) — lihat bagian 7.6.
+- **Keunggulan k = 100% lebih kecil dari teori** (1.3× di S3 vs perkiraan ~2× berdasarkan rasio MIPS). Dugaan: saat 20 container aktif bersamaan, sebagian tetap berjalan di core laptop yang lebih lambat (lihat rasio nyata/prediksi di tabel 7.4, naik seiring jumlah proses PE aktif). Artinya hasil ini cenderung **konservatif** — di infrastruktur fisik sungguhan (bukan laptop berbagi satu CPU), keunggulan k = 100% kemungkinan lebih besar lagi.
 
 #### Kesimpulan
 
@@ -895,7 +981,7 @@ mvn -q exec:java -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_500.txt 50
 mvn -q exec:java -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_1000.txt 100"
 ```
 
-Menjalankan seluruh 9 kombinasi sekaligus (S3 k = 20% paling lama, beberapa menit, karena mensimulasikan ~87.000 detik):
+Menjalankan seluruh 9 kombinasi sekaligus (S3 k = 20% paling lama, beberapa menit, karena mensimulasikan ~87,000 detik):
 
 ```bash
 rm -rf results/simulation    # opsional: summary.csv bersifat append
@@ -917,7 +1003,7 @@ mvn -q exec:java -Dlog=error -Dexec.args="--dataset src/main/resources/dataset/S
 SOURCE=gocj bash scripts/run_grid_cloudsim.sh         # GoCJ 50..1000 x k 20/50/100 (±1 menit)
 SOURCE=synthetic bash scripts/run_grid_cloudsim.sh    # Synthetic 1000..10000 x k 20/50/100 (±2-3 menit)
 
-# Diagram dan tabel (bagian 6.3)
+# Diagram dan tabel (bagian 6.5)
 python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_<timestamp> synthetic=results/sessions/cloudsim_synthetic_<timestamp>
 ```
 
@@ -1084,9 +1170,11 @@ soka-a-5/
 | 5. Implementasi KPB di real world | ✅ 20 container mengikuti spesifikasi VM, PE, dan penempatan desain (bagian 7) |
 | 6. Ujicoba real world | ✅ 9 kombinasi × 3 repetisi, mean ± std (bagian 7.4) |
 | 7. Feedback: tabel arsitektur datacenter | ✅ Tabel 3.1–3.4, termasuk penempatan VM per host |
-| 8. Feedback: uji GoCJ 100, 200, …, 1.000 | ✅ CloudSim, ditambah GoCJ 50, 33 run (bagian 6.1) |
-| 9. Feedback: dataset synthetic 1.000, 2.000, …, 10.000 | ✅ Dibuat (bagian 5) dan diuji di CloudSim, 30 run (bagian 6.2) |
-| 10. Feedback: diagram perbandingan makespan dkk. | ✅ Makespan + 8 metrik, GoCJ dan Synthetic (bagian 6.3) |
+| 8. Feedback: uji GoCJ 100, 200, …, 1,000 | ✅ CloudSim, ditambah GoCJ 50, 33 run (bagian 6.1–6.2) |
+| 9. Feedback: dataset synthetic 1,000, 2,000, …, 10,000 | ✅ Dibuat (bagian 5) dan diuji di CloudSim, 30 run (bagian 6.3) |
+| 10. Feedback: diagram perbandingan makespan dkk. | ✅ Line chart makespan, selisih makespan, dan 8 metrik, GoCJ dan Synthetic (bagian 6.5) |
+| 11. Feedback: tabel perbedaan dan analisis chart | ✅ Tabel perbedaan antar k (6.4), analisis per chart dengan rumus kapasitas (6.6) |
+| 12. Feedback: pemisah ribuan koma, uji di CloudSim | ✅ Format angka `1,000.00` di seluruh README; semua hasil grid berasal dari CloudSim Plus (cara pengujian di 6.1) |
 
 Penyimpangan dari Draft Desain dan alasannya (analisis lengkap, termasuk bagian desain yang kurang tepat untuk diterapkan, ada di [`docs/gap-analysis.md`](docs/gap-analysis.md)):
 
@@ -1106,7 +1194,7 @@ Asumsi yang tetap berlaku (Desain bagian 4.5): tanpa migrasi VM, tanpa kegagalan
 
 KPB adalah algoritma yang cepat dan sederhana, sehingga cocok digunakan sebagai *baseline penjadwalan task independen* pada sistem *heterogen*. 
 
-Pada infrastruktur dengan heterogenitas konsisten, urutan VM tercepat sama untuk semua task. Hasil uji CloudSim untuk GoCJ 50–1.000 task dan Synthetic 1.000–10.000 task menunjukkan k = 100% (setara MCT) selalu menghasilkan makespan terendah, sekitar 43–45% lebih rendah dari k = 20% mulai 400 task, dan keunggulan ini tetap stabil hingga 10.000 task. 
+Pada infrastruktur dengan heterogenitas konsisten, urutan VM tercepat sama untuk semua task. Hasil uji CloudSim untuk GoCJ 50–1,000 task dan Synthetic 1,000–10,000 task menunjukkan k = 100% (setara MCT) selalu menghasilkan makespan terendah, sekitar 43–45% lebih rendah dari k = 20% mulai 400 task, dan keunggulan ini tetap stabil hingga 10,000 task. 
 
 Keunggulan khas KPB lebih relevan ketika jenis task beragam dan urutan VM terbaik dapat berubah menurut karakteristik task. Dalam kondisi itu, pemilihan subset kandidat k% memberi kompromi antara cakupan kandidat dan biaya pencarian. Temuan k = 100% di sini adalah hasil untuk desain dan objective makespan yang diuji, bukan jaminan bahwa nilai tersebut selalu terbaik pada infrastruktur lain.
 
