@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Charts and Markdown tables for KPB grid sessions (grid_summary.csv from realworld/analyze_grid.py).
 
-For every session given, writes into --out (default docs/figures):
-  <name>_makespan.png    makespan vs task count, one line per k
-  <name>_metrics.png     the eight design metrics vs task count, small multiples
-  <name>_difference.png  makespan reduction vs k=20% per task count, with the capacity bound
-  <name>_tables.md       Markdown tables, one per "<!-- table: ... -->" marker: metrics (rows = task
-                         count x k, best per task in bold), difference (between k), theory (simple
-                         capacity formulas vs CloudSim, needs the dataset files)
+Charts (into --out, default docs/figures): one PNG per metric, one panel per session side by side
+(e.g. GoCJ left, Synthetic right), no title inside the image; x = number of tasks, y = the metric
+with its unit, one line per k. The README puts the caption and the short analysis under each image.
+  makespan.png, selisih_makespan.png, energi.png, biaya.png, avg_response.png, utilisasi.png,
+  di.png, throughput.png, waktu_penjadwalan.png
+
+Tables (per session): <name>_tables.md, one Markdown table per "<!-- table: ... -->" marker:
+metrics (rows = task count x k, best per task in bold), difference (between k), theory (simple
+capacity formulas vs CloudSim, needs the dataset files).
 Numbers use ',' for thousands and '.' for decimals (1,234.56).
 
   pip install matplotlib
@@ -69,77 +71,75 @@ def dataset_lengths(directory, name, n):
         return [float(t) for line in f for t in re.split(r"[,;\s]+", line.split("#", 1)[0].strip()) if t]
 
 
-def style(ax, title, unit):
+# (file, column, y-axis label)
+FIGURES = [
+    ("makespan", "makespan_s_mean", "Makespan (detik)"),
+    ("energi", "energy_kwh_mean", "Energi (kWh)"),
+    ("biaya", "cost_mean", "Biaya (USD)"),
+    ("avg_response", "avg_response_s_mean", "Avg response time (detik)"),
+    ("utilisasi", "utilization_pct_mean", "Utilisasi VM (%)"),
+    ("di", "di_mean", "Degree of Imbalance"),
+    ("throughput", "throughput_mean", "Throughput (task/detik)"),
+    ("waktu_penjadwalan", "scheduling_ms_mean", "Waktu penjadwalan (ms)"),
+]
+SOURCE_LABEL = {"gocj": "GoCJ", "synthetic": "Synthetic"}
+
+
+def style(ax, source, ylabel):
     ax.set_facecolor(SURFACE)
-    ax.set_title(f"{title} ({unit})" if unit else title, loc="left", fontsize=10, color=INK, pad=6)
     ax.grid(axis="y", color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     for side in ("left", "bottom"):
         ax.spines[side].set_color(GRID)
-    ax.tick_params(colors=INK_MUTED, labelsize=8, length=0)
+    ax.tick_params(colors=INK_MUTED, labelsize=9, length=0)
+    ax.set_xlabel(f"Jumlah task ({SOURCE_LABEL.get(source, source)})", fontsize=10, color=INK)
+    ax.set_ylabel(ylabel, fontsize=10, color=INK)
     ax.xaxis.set_major_formatter(FuncFormatter(thousands))
     if ax.get_ylim()[1] >= 1000:
         ax.yaxis.set_major_formatter(FuncFormatter(thousands))
 
 
-def draw(ax, rows, column, label_ends):
-    for k, (color, marker) in SERIES.items():
-        sizes = sorted(rows[k])
-        values = [rows[k][n][column] for n in sizes]
-        ax.plot(sizes, values, color=color, linewidth=2, marker=marker, markersize=5,
-                markeredgecolor=SURFACE, markeredgewidth=1, label=f"k = {k}%")
-        if label_ends:
-            ax.annotate(f"k = {k}%", (sizes[-1], values[-1]), xytext=(6, 0), textcoords="offset points",
-                        va="center", fontsize=8, color=INK_MUTED)
-
-
-def makespan_chart(rows, label, path):
-    fig, ax = plt.subplots(figsize=(8, 4.2), facecolor=SURFACE)
-    draw(ax, rows, "makespan_s_mean", label_ends=True)
-    style(ax, f"Makespan KPB (s) vs jumlah task, {label}", "")
-    ax.set_xlabel("Jumlah task", fontsize=9, color=INK_MUTED)
-    ax.legend(frameon=False, fontsize=8, loc="upper left", labelcolor=INK)
-    ax.margins(x=0.08)
-    fig.tight_layout()
-    fig.savefig(path, dpi=150, facecolor=SURFACE)
-    plt.close(fig)
-
-
-def metrics_chart(rows, label, path):
-    fig, axes = plt.subplots(2, 4, figsize=(15, 6.6), facecolor=SURFACE)
-    for ax, (column, title, unit, _) in zip(axes.flat, METRICS):
-        draw(ax, rows, column, label_ends=False)
-        style(ax, title, unit)
-    handles, labels = axes.flat[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper right", ncol=3, frameon=False, fontsize=9, labelcolor=INK)
-    fig.suptitle(f"Delapan metrik desain KPB, {label} (sumbu x = jumlah task)", x=0.01, ha="left",
-                 fontsize=12, color=INK)
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(path, dpi=150, facecolor=SURFACE)
-    plt.close(fig)
-
-
-def difference_chart(rows, label, path):
-    fig, ax = plt.subplots(figsize=(8, 4.2), facecolor=SURFACE)
-    for k in (50, 100):
+def lines(ax, rows, ks, value):
+    for k in ks:
         color, marker = SERIES[k]
         sizes = sorted(rows[k])
-        values = [100 * (1 - rows[k][n]["makespan_s_mean"] / rows[20][n]["makespan_s_mean"]) for n in sizes]
-        ax.plot(sizes, values, color=color, linewidth=2, marker=marker, markersize=5,
-                markeredgecolor=SURFACE, markeredgewidth=1, label=f"k = {k}% vs k = 20%")
-        bound = 100 * (1 - SUBSET_MIPS[20] / SUBSET_MIPS[k])
-        ax.axhline(bound, color=INK_MUTED, linewidth=1, linestyle=(0, (4, 3)))
-        ax.annotate(f"batas kapasitas k = {k}%: {bound:.1f}%", (sizes[0], bound), xytext=(0, 4),
-                    textcoords="offset points", fontsize=8, color=INK_MUTED)
-    style(ax, f"Makespan lebih rendah dari k = 20% (%), {label}", "")
-    ax.set_ylim(0, 50)
-    ax.set_xlabel("Jumlah task", fontsize=9, color=INK_MUTED)
-    ax.legend(frameon=False, fontsize=8, loc="lower right", labelcolor=INK)
-    fig.tight_layout()
+        ax.plot(sizes, [value(k, n) for n in sizes], color=color, linewidth=2, marker=marker, markersize=6,
+                markeredgecolor=SURFACE, markeredgewidth=1, label=f"k = {k}%")
+
+
+def figure(sessions, path, ylabel, ks, value, decorate=None):
+    fig, axes = plt.subplots(1, len(sessions), figsize=(5.2 * len(sessions), 3.9), facecolor=SURFACE,
+                             squeeze=False)
+    for ax, (source, rows) in zip(axes[0], sessions):
+        lines(ax, rows, ks, lambda k, n, rows=rows: value(rows, k, n))
+        if decorate:
+            decorate(ax, rows)
+        style(ax, source, ylabel)
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=len(ks), frameon=False, fontsize=10, labelcolor=INK)
+    fig.tight_layout(rect=(0, 0, 1, 0.9))
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)
+
+
+def charts(sessions, out):
+    for name, column, ylabel in FIGURES:
+        figure(sessions, os.path.join(out, f"{name}.png"), ylabel, sorted(SERIES),
+               lambda rows, k, n, column=column: rows[k][n][column])
+
+    def bounds(ax, rows):
+        for k in (50, 100):
+            bound = 100 * (1 - SUBSET_MIPS[20] / SUBSET_MIPS[k])
+            ax.axhline(bound, color=INK_MUTED, linewidth=1, linestyle=(0, (4, 3)))
+            ax.annotate(f"batas teori k = {k}%: {bound:.1f}%", (min(rows[k]), bound), xytext=(0, 4),
+                        textcoords="offset points", fontsize=8, color=INK_MUTED)
+        ax.set_ylim(0, 50)
+
+    figure(sessions, os.path.join(out, "selisih_makespan.png"), "Makespan lebih rendah dari k = 20% (%)",
+           [50, 100], lambda rows, k, n: 100 * (1 - rows[k][n]["makespan_s_mean"] / rows[20][n]["makespan_s_mean"]),
+           decorate=bounds)
 
 
 def number(x, decimals):
@@ -206,16 +206,16 @@ def main():
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     labels = {"gocj": "GoCJ (CloudSim)", "synthetic": "Synthetic (CloudSim)"}
+    sessions = []
     for spec in args.sessions:
         name, session = spec.split("=", 1)
         rows = load(session)
-        label = labels.get(name, name)
-        makespan_chart(rows, label, os.path.join(args.out, f"{name}_makespan.png"))
-        metrics_chart(rows, label, os.path.join(args.out, f"{name}_metrics.png"))
-        difference_chart(rows, label, os.path.join(args.out, f"{name}_difference.png"))
+        sessions.append((name, rows))
         lengths = {n: dataset_lengths(args.dataset_dir, name, n) for n in rows[20]}
-        tables(rows, label, os.path.join(args.out, f"{name}_tables.md"), lengths)
-        print(f"{name}: {session} -> {args.out}/{name}_makespan.png, _metrics.png, _difference.png, _tables.md")
+        tables(rows, labels.get(name, name), os.path.join(args.out, f"{name}_tables.md"), lengths)
+        print(f"{name}: {session} -> {args.out}/{name}_tables.md")
+    charts(sessions, args.out)
+    print(f"grafik -> {args.out}/" + ", ".join(f"{n}.png" for n, _, _ in FIGURES) + ", selisih_makespan.png")
 
 
 if __name__ == "__main__":

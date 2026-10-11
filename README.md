@@ -145,7 +145,7 @@ Pada konfigurasi project ini, VM yang lebih cepat selalu lebih cepat untuk **sem
 | 50% | 10 | V3 + 6 VM V2 |
 | 100% | 20 | Semua VM (setara MCT) |
 
-Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menentukan seberapa terkonsolidasi beban kerja. Secara teori ini adalah tuas *trade-off* antara makespan dan energi. Namun hasil CloudSim (bagian 6.6) menunjukkan bahwa pada desain ini konsolidasi justru **memperburuk** energi, karena keenam host tetap menyala dan makespan bertambah panjang.
+Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menentukan seberapa terkonsolidasi beban kerja. Secara teori ini adalah tuas *trade-off* antara makespan dan energi. Namun hasil CloudSim (bagian 6.5, Gambar 6.3) menunjukkan bahwa pada desain ini konsolidasi justru **memperburuk** energi, karena keenam host tetap menyala dan makespan bertambah panjang.
 
 ---
 
@@ -312,7 +312,7 @@ Setiap run memvalidasi: 20/20 VM dibuat, setiap cloudlet berjalan di VM hasil KP
 python3 realworld/generate_synthetic.py --dir src/main/resources/dataset --seed 42
 ```
 
-Rata-rata panjang task tiap file GoCJ tidak sama persis (124,991–138,420 MI), sehingga total beban (Σ MI) tidak naik linear terhadap jumlah task. Contohnya GoCJ 600 berisi 82.3 juta MI (naik 27% dari GoCJ 500), sedangkan GoCJ 700 hanya 87.5 juta MI (naik 6%). Hal ini menjelaskan "tangga" pada diagram makespan GoCJ di bagian 6.5 (penjelasan di 6.6).
+Rata-rata panjang task tiap file GoCJ tidak sama persis (124,991–138,420 MI), sehingga total beban (Σ MI) tidak naik linear terhadap jumlah task. Contohnya GoCJ 600 berisi 82.3 juta MI (naik 27% dari GoCJ 500), sedangkan GoCJ 700 hanya 87.5 juta MI (naik 6%). Hal ini menjelaskan "tangga" pada grafik makespan GoCJ (Gambar 6.1).
 
 Pemetaan ke cloudlet (Desain bagian 1.3):
 
@@ -482,38 +482,65 @@ Selisih = nilai k yang lebih besar dikurangi nilai k yang lebih kecil; persen re
 | 9,000 | -9,350.65 (-31.3%) | -4,005.19 (-19.6%) | -13,355.84 (-44.8%) | -38.1% | -44.7% | 80.8% | 1.015 / 1.010 / 1.008 |
 | 10,000 | -10,309.64 (-31.3%) | -4,404.23 (-19.5%) | -14,713.87 (-44.7%) | -38.1% | -44.6% | 80.3% | 1.015 / 1.010 / 1.009 |
 
-### 6.5 Diagram Perbandingan (Line Chart)
+### 6.5 Grafik Perbandingan (Line Chart)
 
-Sumbu x pada semua diagram adalah jumlah task; satu garis per nilai k (warna dan bentuk penanda sama di semua diagram).
+Semua grafik memakai format yang sama: sumbu x = **jumlah task**, sumbu y = **metrik yang diukur** (dengan satuannya), panel kiri = dataset **GoCJ** (50–1,000 task), panel kanan = dataset **Synthetic** (1,000–10,000 task), dan satu garis untuk setiap nilai **k** (biru = 20%, oranye = 50%, hijau = 100%).
 
-**Makespan**
+![Grafik makespan](docs/figures/makespan.png)
 
-![Makespan KPB, GoCJ](docs/figures/gocj_makespan.png)
+**Gambar 6.1 Makespan.** Grafik ini menunjukkan waktu sampai task terakhir selesai (makespan) untuk setiap jumlah task.
+*Analisis:* Makespan naik lurus seiring jumlah task karena total beban bertambah. k = 100% selalu paling rendah karena memakai seluruh 20 VM (72,000 MIPS), sedangkan k = 20% hanya memakai 4 VM V3 (40,000 MIPS). Garis GoCJ berbentuk "tangga" karena total panjang task tiap file GoCJ tidak sebanding dengan jumlah task-nya (GoCJ 600 naik 27% dari GoCJ 500, GoCJ 700 hanya naik 6%).
 
-![Makespan KPB, Synthetic](docs/figures/synthetic_makespan.png)
+![Grafik selisih makespan](docs/figures/selisih_makespan.png)
 
-**Perbedaan makespan terhadap k = 20%** (garis putus-putus = batas kapasitas, lihat 6.6)
+**Gambar 6.2 Selisih makespan terhadap k = 20%.** Grafik ini menunjukkan berapa persen makespan k = 50% dan k = 100% lebih rendah daripada k = 20%. Garis putus-putus adalah batas teori.
+*Analisis:* Selisihnya naik lalu mendatar di ±31% (k = 50%) dan ±44% (k = 100%), sama dengan batas teori 1 − 40,000/58,000 dan 1 − 40,000/72,000 (perbandingan kapasitas VM yang dipakai). Pada task sedikit (GoCJ di bawah 400 task) selisihnya lebih kecil karena makespan ditentukan oleh beberapa task raksasa (hingga 900,000 MI) yang tidak bisa dibagi ke VM lain.
 
-![Selisih makespan, GoCJ](docs/figures/gocj_difference.png)
+![Grafik energi](docs/figures/energi.png)
 
-![Selisih makespan, Synthetic](docs/figures/synthetic_difference.png)
+**Gambar 6.3 Energi.** Grafik ini menunjukkan total energi keenam host selama simulasi (kWh).
+*Analisis:* Energi mengikuti makespan karena keenam host menyala terus selama simulasi (daya idle total 741 W). Penurunannya lebih kecil dari makespan (±38% vs ±45% pada k = 100%) karena energi untuk mengerjakan task-nya sendiri (±1.1 kWh pada 10,000 task) sama untuk semua k.
 
-**Delapan metrik desain** (makespan, energi, biaya, avg response time, utilisasi, DI, throughput, waktu penjadwalan)
+![Grafik biaya](docs/figures/biaya.png)
 
-![Delapan metrik, GoCJ](docs/figures/gocj_metrics.png)
+**Gambar 6.4 Biaya.** Grafik ini menunjukkan biaya CPU + RAM + bandwidth seluruh VM (USD).
+*Analisis:* Biaya sejajar dengan makespan, sekitar 1.20 USD per detik makespan untuk semua k, karena ke-20 VM dihitung aktif selama simulasi. Karena itu k = 100% juga paling murah.
 
-![Delapan metrik, Synthetic](docs/figures/synthetic_metrics.png)
+![Grafik avg response time](docs/figures/avg_response.png)
 
-Diagram dan semua tabel di bagian 6.2–6.6 dibuat ulang dari `grid_summary.csv` dengan:
+**Gambar 6.5 Avg response time.** Grafik ini menunjukkan rata-rata waktu dari task tiba (t = 0) sampai task selesai.
+*Analisis:* Nilainya sekitar setengah makespan karena task selesai tersebar merata dari awal sampai akhir antrean. Bentuk grafiknya karena itu sama dengan grafik makespan.
+
+![Grafik utilisasi](docs/figures/utilisasi.png)
+
+**Gambar 6.6 Utilisasi VM.** Grafik ini menunjukkan persentase waktu ke-20 VM sibuk selama makespan.
+*Analisis:* Garisnya mendatar di ±20%, ±50%, dan ±99% karena k = 20% hanya memakai 4 dari 20 VM, k = 50% memakai 10 VM, dan k = 100% memakai semua VM. VM yang dipakai sibuk sampai akhir. Pada GoCJ 50 task, k = 100% lebih rendah (37.5%) karena hanya 15 VM yang mendapat task.
+
+![Grafik degree of imbalance](docs/figures/di.png)
+
+**Gambar 6.7 Degree of Imbalance (DI).** Grafik ini menunjukkan ketidakseimbangan beban antar 20 VM: (waktu selesai VM paling lama − paling cepat) / rata-rata. Makin kecil, makin seimbang.
+*Analisis:* Garisnya mendatar di 5 (k = 20%) dan 2 (k = 50%) karena VM yang tidak dipakai terhitung selesai di 0 detik, sehingga DI = 20 / jumlah VM yang dipakai (20/4 = 5, 20/10 = 2). Pada k = 100% semua VM selesai hampir bersamaan, jadi DI mendekati 0.
+
+![Grafik throughput](docs/figures/throughput.png)
+
+**Gambar 6.8 Throughput.** Grafik ini menunjukkan jumlah task yang selesai per detik (jumlah task / makespan).
+*Analisis:* Garisnya mendatar di ±0.30, ±0.44, dan ±0.55 task/detik karena throughput ≈ kapasitas VM yang dipakai / rata-rata panjang task, sehingga tidak bergantung pada jumlah task. Garis GoCJ naik-turun mengikuti rata-rata panjang task tiap file.
+
+![Grafik waktu penjadwalan](docs/figures/waktu_penjadwalan.png)
+
+**Gambar 6.9 Waktu penjadwalan.** Grafik ini menunjukkan waktu yang dibutuhkan KPB untuk menjadwalkan semua task (milidetik, jam dinding).
+*Analisis:* Garisnya naik-turun tanpa pola karena nilainya sangat kecil (0.1–23 ms) dan dipengaruhi JIT/garbage collector Java, bukan oleh nilai k. Yang penting, 10,000 task tetap terjadwal dalam ≤ 23 ms.
+
+Grafik dan semua tabel di bagian 6.2–6.6 dibuat ulang dari `grid_summary.csv` dengan:
 
 ```bash
 pip install matplotlib
 python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_20261009_225810 \
                              synthetic=results/sessions/cloudsim_synthetic_20261009_225854
-# -> docs/figures/<nama>_makespan.png, _difference.png, _metrics.png, _tables.md
+# -> docs/figures/<metrik>.png dan docs/figures/<dataset>_tables.md
 ```
 
-### 6.6 Analisis: Kenapa Hasil Chart-nya Seperti Ini
+### 6.6 Penjelasan dengan Rumus Kapasitas
 
 **Kunci penjelasan: subset k% selalu berisi VM yang sama.** Kecepatan VM hanya ditentukan tipenya (`ETC = L / C`), sehingga urutan VM tercepat sama untuk semua task (bagian 2.5). Akibatnya setiap k setara dengan sebuah "kolam" VM dengan kapasitas tetap:
 
@@ -561,17 +588,7 @@ Tabel berikut membandingkan kedua rumus itu dengan hasil CloudSim:
 | 9,000 | 1,174,900,000 | 130,544 | 29,372.5 / 20,256.9 / 16,318.1 | 29,835.2 / 20,484.5 / 16,479.3 | 0.306 / 0.444 / 0.552 | 0.302 / 0.439 / 0.546 |
 | 10,000 | 1,295,258,000 | 129,526 | 32,381.5 / 22,332.0 / 17,989.7 | 32,947.1 / 22,637.5 / 18,233.2 | 0.309 / 0.448 / 0.556 | 0.304 / 0.442 / 0.548 |
 
-Untuk Synthetic dan GoCJ ≥ 400 task, CloudSim hanya 1–4% di atas rumus kapasitas. Dari sini setiap chart bisa dijelaskan:
-
-1. **Makespan naik lurus, dengan k = 20% paling curam.** Karena makespan ≈ ΣL / C dan rata-rata L hampir konstan (±130,000 MI), makespan naik linear terhadap jumlah task. Kemiringannya = rata-rata L / C: ±3.3 s per task (k = 20%), ±2.3 s (k = 50%), dan ±1.8 s (k = 100%). Itulah sebabnya ketiga garis makin menjauh saat task bertambah. Pada GoCJ garisnya berbentuk "tangga" karena total MI tiap file tidak sebanding dengan jumlah task (bagian 5): GoCJ 600 naik 27% dari GoCJ 500, sedangkan GoCJ 700 hanya naik 6%. Garis Synthetic lebih mulus karena komposisi task-nya seragam (bootstrap dari pool yang sama).
-2. **Selisih makespan naik lalu mendatar di ±31% dan ±44%.** Batas atasnya adalah 1 − C(k = 20%) / C(k): 1 − 40,000/58,000 = 31.0% untuk k = 50%, dan 1 − 40,000/72,000 = 44.4% untuk k = 100%. Synthetic sedikit di atas batas (31.3% dan 44.7%) karena overhead CloudSim terhadap f1 pada k = 20% (1.015×) sedikit lebih besar daripada pada k = 100% (1.008×). Pada task sedikit (GoCJ 50–300), selisihnya lebih kecil (18–41%). Makespan dibatasi oleh beberapa task raksasa (hingga 900,000 MI = 90 s, bahkan di V3 tercepat), dan beban tidak bisa dibagi rata ke kolam. Pada GoCJ 50, makespan CloudSim k = 100% (168.8 s) jauh di atas ΣL / C (95.9 s), dan hanya 15 dari 20 VM yang terpakai.
-3. **Energi mengikuti makespan, tetapi turunnya lebih kecil (±38% vs ±45%).** Energi = daya idle × makespan + energi dinamis. Daya idle keenam host konstan 3 × 175 + 3 × 72 = 741 W selama makespan, karena semua host tetap menyala. Energi dinamis sebanding dengan total kerja ΣL (±0.0031 J per MI) dan hampir sama untuk semua k, karena task yang dikerjakan sama. Contoh Synthetic 10,000: idle 741 W × 32,947 s = 6.78 kWh ditambah dinamis ±1.13 kWh = 7.91 kWh untuk k = 20%, dan 741 W × 18,233 s = 3.75 kWh ditambah ±1.15 kWh = 4.90 kWh untuk k = 100%. Hanya bagian idle yang mengecil, sehingga penurunan energi lebih kecil dari penurunan makespan.
-4. **Biaya sejajar dengan makespan.** Biaya CPU `VmCost` = tarif per detik × umur VM, dan ke-20 VM hidup sepanjang simulasi. Akibatnya biaya ≈ 1.20 USD per detik makespan untuk semua k (Synthetic 10,000: 39,601.93 / 32,947 s dan 21,945.29 / 18,233 s). Penurunannya (44.6%) hampir sama dengan makespan (44.7%).
-5. **Avg response time ≈ setengah makespan.** Semua task tiba di t = 0 dan selesai tersebar merata dari awal sampai akhir antrean, sehingga rata-rata waktu selesai ≈ makespan / 2 (Synthetic 10,000: 16,341.77 / 32,947.10 = 0.50 untuk k = 20%, dan 0.49 untuk k = 100%). Grafiknya karena itu berbentuk sama dengan makespan.
-6. **Utilisasi mendatar di ±20%, ±50%, dan ±99%.** Utilisasi = Σ waktu sibuk VM / (20 × makespan). Hanya s = ⌈k% × 20⌉ VM yang pernah dipakai, dan semuanya sibuk hampir sampai akhir (lihat `vmFinish` di log 6.1: empat VM V3 selesai di 32,859–32,947 s, enam belas lainnya 0). Utilisasi ≈ s / 20 = 4/20, 10/20, dan 20/20. Garis k = 100% lebih rendah pada GoCJ kecil (37.5% pada 50 task) karena tidak semua VM sempat terisi.
-7. **DI mendatar di 5, 2, dan ±0.** DI dihitung atas 20 VM. Bila s VM selesai di ±T dan sisanya 0, DI = (T − 0) / (s × T / 20) = 20 / s, yaitu 20/4 = 5 untuk k = 20% dan 20/10 = 2 untuk k = 50%. Untuk k = 100% semua VM selesai hampir bersamaan, sehingga DI mendekati 0 (0.01–0.13). Jadi DI tinggi pada k kecil berasal dari VM yang sengaja tidak dipakai, bukan dari beban yang timpang di VM yang dipakai (DI atas VM terpakai: 0.003 pada contoh log).
-8. **Throughput mendatar di ±0.30 / ±0.44 / ±0.55 task/s.** Throughput = task / makespan ≈ C / rata-rata L, sehingga tidak bergantung pada jumlah task dan grafiknya datar. Zig-zag pada GoCJ mengikuti rata-rata L tiap file: GoCJ 700–800 (rata-rata ±124,000 MI) lebih tinggi, sedangkan GoCJ 600 (±137,000 MI) lebih rendah.
-9. **Waktu penjadwalan naik-turun tanpa pola.** Nilainya hanya 0.1–23 ms dan diukur dengan jam dinding, sehingga didominasi noise JIT/garbage collector Java, bukan kompleksitas KPB O(N · M log M) dengan M = 20. Satu-satunya tren yang terlihat adalah 10,000 task tetap selesai dijadwalkan dalam ≤ 23 ms.
+Untuk Synthetic dan GoCJ ≥ 400 task, CloudSim hanya 1–4% di atas rumus kapasitas, sehingga bentuk grafik 6.1–6.8 bisa diturunkan langsung dari kedua rumus ini. Makespan naik lurus dengan kemiringan rata-rata L / C (±3.3, ±2.3, dan ±1.8 detik per task untuk k = 20%, 50%, 100%). Throughput mendatar di C / rata-rata L. Selisih makespan mendatar di 1 − C(20%) / C(k). Pada task sedikit (GoCJ 50–300), rumus ini meleset jauh (GoCJ 50, k = 100%: CloudSim 168.8 s vs rumus 95.9 s) karena beban tidak bisa dibagi rata: satu task 900,000 MI saja sudah butuh 90 s di VM tercepat.
 
 **Kesimpulan bagian 6.**
 - k = 100% memberi makespan, energi, biaya, response time, utilisasi, DI, dan throughput terbaik di semua 21 ukuran dataset.
@@ -1172,8 +1189,8 @@ soka-a-5/
 | 7. Feedback: tabel arsitektur datacenter | ✅ Tabel 3.1–3.4, termasuk penempatan VM per host |
 | 8. Feedback: uji GoCJ 100, 200, …, 1,000 | ✅ CloudSim, ditambah GoCJ 50, 33 run (bagian 6.1–6.2) |
 | 9. Feedback: dataset synthetic 1,000, 2,000, …, 10,000 | ✅ Dibuat (bagian 5) dan diuji di CloudSim, 30 run (bagian 6.3) |
-| 10. Feedback: diagram perbandingan makespan dkk. | ✅ Line chart makespan, selisih makespan, dan 8 metrik, GoCJ dan Synthetic (bagian 6.5) |
-| 11. Feedback: tabel perbedaan dan analisis chart | ✅ Tabel perbedaan antar k (6.4), analisis per chart dengan rumus kapasitas (6.6) |
+| 10. Feedback: diagram perbandingan makespan dkk. | ✅ 9 line chart tanpa judul, sumbu x = jumlah task, sumbu y = metrik + satuan, GoCJ dan Synthetic berdampingan (bagian 6.5) |
+| 11. Feedback: tabel perbedaan dan analisis chart | ✅ Tabel perbedaan antar k (6.4); keterangan dan analisis singkat di bawah setiap grafik (6.5); penjelasan rumus kapasitas (6.6) |
 | 12. Feedback: pemisah ribuan koma, uji di CloudSim | ✅ Format angka `1,000.00` di seluruh README; semua hasil grid berasal dari CloudSim Plus (cara pengujian di 6.1) |
 
 Penyimpangan dari Draft Desain dan alasannya (analisis lengkap, termasuk bagian desain yang kurang tepat untuk diterapkan, ada di [`docs/gap-analysis.md`](docs/gap-analysis.md)):
