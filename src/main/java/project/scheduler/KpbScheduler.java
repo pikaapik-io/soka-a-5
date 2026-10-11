@@ -42,7 +42,7 @@ public final class KpbScheduler implements Scheduler {
 		double[] readyTime = new double[vmCapacity.length];
 		int[] mapping = new int[taskLength.length];
 
-		// ★ TUNJUK: Langkah 1 - task diproses sesuai urutan kedatangan, TIDAK diurutkan dulu (beda dengan LJFP).
+		// ★ TUNJUK: Langkah 1 - task diproses sesuai urutan kedatangan
 		for (int task = 0; task < taskLength.length; task++) {
 			// ★ TUNJUK: Langkah 2-3 - ranking VM berdasarkan waktu eksekusi (ETC = L/C), ambil subset k% terbaik.
 			Integer[] candidates = rankByExecutionTime(taskLength[task], vmCapacity);
