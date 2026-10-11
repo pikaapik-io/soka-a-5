@@ -133,7 +133,7 @@ Data contoh bawaan program memakai 5 task dan 20 VM dengan k = 20%, sehingga s =
 | 3 | 300.000 | 30 | 90, 60, 45, 0 | 120, 90, 75, 30 | VM3 |
 | 4 | 150.000 | 15 | 90, 60, 45, 30 | 105, 75, 60, **45** | VM3 |
 
-Hasilnya `mapping = [0, 1, 2, 3, 3]`, sama dengan output `mvn -q exec:java`. Menurut rumus f1 desain, makespan-nya 90 s. Dengan Cloudlet memakai seluruh PE VM tujuan dan scheduler `SpaceShared`, makespan CloudSim menjadi **90,21 s** (lihat bagian 6.2).
+Hasilnya `mapping = [0, 1, 2, 3, 3]`, sama dengan output `mvn -q exec:java`. Menurut rumus f1 desain, makespan-nya 90 s. Dengan Cloudlet memakai seluruh PE VM tujuan dan scheduler `SpaceShared`, makespan CloudSim menjadi **90,21 s**.
 
 ### 2.5 Perilaku KPB pada VM yang Konsisten
 
@@ -145,19 +145,19 @@ Pada konfigurasi project ini, VM yang lebih cepat selalu lebih cepat untuk **sem
 | 50% | 10 | V3 + 6 VM V2 |
 | 100% | 20 | Semua VM (setara MCT) |
 
-Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menentukan seberapa terkonsolidasi beban kerja. Secara teori ini adalah tuas *trade-off* antara makespan dan energi. Namun hasil CloudSim (bagian 6.4) menunjukkan bahwa pada desain ini konsolidasi justru **memperburuk** energi, karena keenam host tetap menyala dan makespan bertambah panjang.
+Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menentukan seberapa terkonsolidasi beban kerja. Secara teori ini adalah tuas *trade-off* antara makespan dan energi. Namun hasil CloudSim (bagian 6.6) menunjukkan bahwa pada desain ini konsolidasi justru **memperburuk** energi, karena keenam host tetap menyala dan makespan bertambah panjang.
 
 ---
 
 ## 3. Arsitektur Datacenter
 
-terdiri dua datacenter dengan karakter berbeda, satu berorientasi kinerja dan satu berorientasi efisiensi energi.
+Arsitektur terdiri atas dua datacenter dengan karakter berbeda: satu berorientasi kinerja dan satu berorientasi efisiensi energi.
 
-Arsitektur ini dibangun di **CloudSim Plus 6.6.1** sesuai Draft Desain Project bagian 2. Penempatan VM di bawah adalah hasil CloudSim yang sebenarnya (`results/simulation/placement.csv`).
+Arsitektur ini dibangun di **CloudSim Plus 6.6.1** sesuai Draft Desain Project bagian 2. Penempatan VM pada gambar adalah hasil CloudSim yang sebenarnya (`results/simulation/placement.csv`). Tabel 3.1–3.4 merangkum isi gambar yang sama.
 
 ```mermaid
 flowchart TD
-    T["GoCJ Cloudlet · 100 / 500 / 1.000 task<br/>1 PE · 300 KB in/out · tiba t = 0"]
+    T["Cloudlet GoCJ 50–1.000 / Synthetic 1.000–10.000 task<br/>300 KB in/out · tiba t = 0"]
     K["KPB Scheduler<br/>subset k% VM terbaik → min CT"]
     Broker["DatacenterBrokerSimple<br/>bindCloudletToVm(mapping)"]
     T --> K --> Broker
@@ -211,9 +211,21 @@ Model daya: `PowerModelHostSimple`, linear `P(u) = P_idle + (P_maks − P_idle) 
 | V1 Small | 8 | 1 × 1.000 | 1.000 MIPS | 2 GB | 500 Mbps | VM 12–19 | DC-2 |
 | **Total** | **20** | **40 PE** | **72.000 MIPS** | **80 GB** | — | — | — |
 
-Penggunaan PE per host hasil CloudSim: A0, A1, A2 = 8/8 PE (DC-1 penuh), sedangkan B0, B1, B2 = 6/8, 5/8, 5/8 PE.
+### 3.4 Penempatan VM per Host
 
-### 3.4 Batasan Keras (Desain bagian 4.3)
+Hasil CloudSim (`VmAllocationPolicySimple` + batasan C3–C6), sama dengan gambar di atas dan dengan label `soka.host` container real-world:
+
+| DC | Host | Tipe host | VM yang ditempatkan | PE terpakai | MIPS VM / MIPS host |
+|:---:|:---:|:---:|:---|:---:|:---:|
+| DC-1 Performance | A0 | A | vm00 V3, vm03 V3 | 8 / 8 | 20.000 / 24.000 |
+| DC-1 Performance | A1 | A | vm01 V3, vm04 V2, vm06 V2 | 8 / 8 | 16.000 / 24.000 |
+| DC-1 Performance | A2 | A | vm02 V3, vm05 V2, vm07 V2 | 8 / 8 | 16.000 / 24.000 |
+| DC-2 Efficiency | B0 | B | vm08 V2, vm11 V2, vm16 V1, vm19 V1 | 6 / 8 | 8.000 / 14.400 |
+| DC-2 Efficiency | B1 | B | vm09 V2, vm12 V1, vm14 V1, vm17 V1 | 5 / 8 | 6.000 / 14.400 |
+| DC-2 Efficiency | B2 | B | vm10 V2, vm13 V1, vm15 V1, vm18 V1 | 5 / 8 | 6.000 / 14.400 |
+| **Total** | **6** | — | **20 VM** | **40 / 48** | **72.000 / 115.200** |
+
+### 3.5 Batasan Keras (Desain bagian 4.3)
 
 | Kode | Batasan | Cara dipenuhi di kode |
 |:---:|:---|:---|
@@ -260,7 +272,7 @@ KPB hanya melihat panjang task dan kapasitas VM (rumus f1 desain) untuk mengambi
 | [`CloudSimAdapter.java`](src/main/java/project/setup/CloudSimAdapter.java) | Mengubah VM CloudSim menjadi array kapasitas untuk scheduler |
 | [`EnergyMeter.java`](src/main/java/project/metrics/EnergyMeter.java) | Integrasi `P(u)` semua host dari 0 sampai makespan |
 | [`MetricsCollector.java`](src/main/java/project/metrics/MetricsCollector.java) | Menghitung 8 metrik desain dari hasil CloudSim |
-| [`ScheduleEvaluator.java`](src/main/java/project/model/ScheduleEvaluator.java), [`ScheduleContext.java`](src/main/java/project/model/ScheduleContext.java) | Model analitik f1 (makespan) dan energi, dipakai bersama KPB/HS/CSA |
+| [`ScheduleEvaluator.java`](src/main/java/project/model/ScheduleEvaluator.java), [`ScheduleContext.java`](src/main/java/project/model/ScheduleContext.java) | Model analitik f1 (makespan) dan energi, untuk baris `prediksi analitik` di setiap run |
 
 ### 4.3 Pemetaan Langkah KPB ke Kode
 
@@ -286,19 +298,21 @@ Setiap run memvalidasi: 20/20 VM dibuat, setiap cloudlet berjalan di VM hasil KP
 
 ## 5. Dataset Uji Coba
 
-| Aspek | Keterangan |
-|:---|:---|
-| Nama | GoCJ (Google Cloud Jobs) Dataset |
-| Sumber | Mendeley Data, diturunkan dari jejak beban kerja Google cluster |
-| Format | Teks, satu panjang task (MI) per baris |
-| Rentang | 15.000 – 900.000 MI |
-| File | `GoCJ_Dataset_100.txt`, `GoCJ_Dataset_500.txt`, `GoCJ_Dataset_1000.txt` |
+| Aspek | GoCJ | Synthetic |
+|:---|:---|:---|
+| Sumber | GoCJ (Google Cloud Jobs) Dataset, Mendeley Data, diturunkan dari jejak beban kerja Google cluster | Dibuat dari GoCJ dengan [`realworld/generate_synthetic.py`](realworld/generate_synthetic.py) |
+| Ukuran | 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1.000 task | 1.000, 2.000, 3.000, …, 10.000 task |
+| File | `GoCJ_Dataset_<N>.txt`; ukuran 50 = `GoCJ_Dataset_50_subset.txt` (50 baris pertama GoCJ 100, karena tidak ada file resmi GoCJ 50) | `Synthetic_Dataset_<N>.txt` |
+| Format | Teks, satu panjang task (MI) per baris | Sama |
+| Rentang | 15.000 – 900.000 MI | 15.000 – 900.000 MI |
 
-| Skenario | Jumlah task | Tujuan |
-|:---:|:---:|:---|
-| S1 | 100 | Verifikasi kebenaran implementasi |
-| S2 | 500 | Beban normal (skenario acuan utama) |
-| S3 | 1.000 | Uji skalabilitas |
+**Cara membuat dataset synthetic.** Semua file GoCJ resmi (100–1.000, total 5.500 task) digabung menjadi satu pool, lalu setiap ukuran N diambil acak *dengan pengembalian* (bootstrap) dari pool itu. Setiap ukuran memakai generatornya sendiri, `random.Random(42 + N)`, sehingga file yang sama selalu terbentuk ulang identik. Distribusinya mengikuti GoCJ: kuartil sama, rata-rata berbeda ≤ 2,9%, jarak Kolmogorov-Smirnov ≤ 0,024.
+
+```bash
+python3 realworld/generate_synthetic.py --dir src/main/resources/dataset --seed 42
+```
+
+Rata-rata panjang task tiap file GoCJ tidak sama persis (124.991–138.420 MI), sehingga total beban (Σ MI) tidak naik linear terhadap jumlah task. Contohnya GoCJ 600 berisi 82,3 juta MI (naik 27% dari GoCJ 500), sedangkan GoCJ 700 hanya 87,5 juta MI (naik 6%). Hal ini menjelaskan "tangga" pada diagram makespan GoCJ di bagian 6.3.
 
 Pemetaan ke cloudlet (Desain bagian 1.3):
 
@@ -315,41 +329,145 @@ Pemetaan ke cloudlet (Desain bagian 1.3):
 
 ## 6. Hasil Simulasi (CloudSim Plus)
 
-Semua angka di bagian ini berasal dari **simulasi CloudSim Plus penuh setelah perbaikan model PE**. Setiap Cloudlet memakai semua PE VM tujuan; angka adalah satu run per konfigurasi. Validasi ulang 3×3 menunjukkan hasil deterministik dan dekat dengan model analitik. CSV historis di [`results/simulation/summary.csv`](results/simulation/summary.csv) masih berisi hasil model lama dan tidak mencakup validasi ulang ini.
+Grid lengkap: **KPB dengan k = 20%, 50%, 100%** pada GoCJ 50–1.000 (11 ukuran, 33 run) dan Synthetic 1.000–10.000 (10 ukuran, 30 run). CloudSim deterministik (dua run identik, kecuali waktu penjadwalan wall-clock), jadi satu run per sel. Data mentah ada di folder sesi:
 
-### 6.1 Delapan Metrik Desain
+- GoCJ: [`results/sessions/cloudsim_gocj_20261009_225810/`](results/sessions/cloudsim_gocj_20261009_225810/) (`grid_summary.csv`, log, `cloudlets_*.csv`, `mapping_*.json`)
+- Synthetic: [`results/sessions/cloudsim_synthetic_20261009_225854/`](results/sessions/cloudsim_synthetic_20261009_225854/)
 
-| Skenario | k | Makespan (s) | Energi (kWh) | Avg response (s) | Utilisasi | DI | Throughput (task/s) | Biaya (USD) | Waktu penjadwalan |
-|:---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| S1 (100) | 20% | 367,80 | 0,0875 | 164,19 | 18,64% | 5,364 | 0,2719 | 506,77 | 0,95 ms |
-| S1 (100) | 50% | 273,35 | 0,0681 | 111,88 | 41,06% | 2,436 | 0,3658 | 393,43 | 0,29 ms |
-| S1 (100) | 100% | **233,08** | **0,0599** | **90,71** | **70,45%** | **0,747** | **0,4290** | **345,11** | 0,82 ms |
-| S2 (500) | 20% | 1.655,38 | 0,3976 | 826,73 | 19,94% | 5,016 | 0,3020 | 2.051,87 | 0,62 ms |
-| S2 (500) | 50% | 1.146,19 | 0,2930 | 565,91 | 48,99% | 2,041 | 0,4362 | 1.440,84 | 1,18 ms |
-| S2 (500) | 100% | **933,07** | **0,2497** | **452,88** | **95,29%** | **0,112** | **0,5359** | **1.185,10** | 1,49 ms |
-| S3 (1.000) | 20% | 3.331,27 | 0,7990 | 1.602,00 | 19,76% | 5,060 | 0,3002 | 4.062,94 | 1,89 ms |
-| S3 (1.000) | 50% | 2.313,56 | 0,5900 | 1.097,82 | 48,48% | 2,063 | 0,4322 | 2.841,69 | 1,65 ms |
-| S3 (1.000) | 100% | **1.880,16** | **0,5020** | **881,11** | **94,40%** | **0,099** | **0,5319** | **2.321,60** | 3,95 ms |
+Keterangan kolom: energi mencakup 6 host dari t = 0 sampai makespan, termasuk daya idle; biaya = CPU + RAM + bandwidth (`VmCost`); DI dihitung atas 20 VM sesuai definisi desain. **Tebal** menandai nilai terbaik di antara ketiga k untuk jumlah task yang sama. Waktu penjadwalan diukur dengan wall-clock dan dipengaruhi JIT/GC, sehingga tidak diberi tanda tebal.
 
-Keterangan: DI dihitung atas 20 VM sesuai definisi desain; biaya = CPU + RAM + bandwidth (`VmCost`); energi mencakup 6 host dari t = 0 sampai makespan, termasuk daya idle.
+### 6.1 GoCJ 50–1.000 Task
 
-### 6.2 CloudSim vs Model Analitik (Rumus f1 Desain)
+| Task | k | Makespan (s) | Energi (kWh) | Biaya (USD) | Avg response time (s) | Utilisasi (%) | Degree of Imbalance (20 VM) | Throughput (task/s) | Waktu penjadwalan (ms) |
+|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 50 | 20% | 213,00 | 0,0499 | 321,01 | 74,35 | 16,45 | 6,079 | 0,235 | 0,36 |
+| 50 | 50% | 174,75 | 0,0420 | 275,12 | 53,26 | 30,27 | 3,304 | 0,286 | 0,13 |
+| 50 | 100% | **168,85** | **0,0408** | **268,03** | **47,82** | **37,50** | **2,667** | **0,296** | 0,34 |
+| 100 | 20% | 367,80 | 0,0875 | 506,77 | 164,19 | 18,64 | 5,364 | 0,272 | 0,44 |
+| 100 | 50% | 273,35 | 0,0681 | 393,43 | 111,88 | 41,06 | 2,436 | 0,366 | 0,53 |
+| 100 | 100% | **233,08** | **0,0599** | **345,11** | **90,71** | **70,45** | **0,747** | **0,429** | 0,36 |
+| 200 | 20% | 713,82 | 0,1707 | 922,00 | 372,66 | 19,35 | 5,169 | 0,280 | 1,17 |
+| 200 | 50% | 521,16 | 0,1312 | 690,80 | 254,24 | 44,38 | 2,253 | 0,384 | 0,61 |
+| 200 | 100% | **436,75** | **0,1140** | **589,51** | **201,84** | **82,49** | **0,335** | **0,458** | 0,89 |
+| 300 | 20% | 1.091,55 | 0,2610 | 1.375,27 | 545,77 | 19,30 | 5,182 | 0,275 | 0,76 |
+| 300 | 50% | 781,42 | 0,1973 | 1.003,12 | 371,85 | 45,54 | 2,196 | 0,384 | 0,69 |
+| 300 | 100% | **648,65** | **0,1703** | **843,79** | **293,23** | **86,34** | **0,259** | **0,462** | 0,44 |
+| 400 | 20% | 1.321,78 | 0,3174 | 1.651,55 | 644,62 | 19,93 | 5,019 | 0,303 | 0,45 |
+| 400 | 50% | 911,93 | 0,2332 | 1.159,73 | 441,69 | 49,32 | 2,028 | 0,439 | 0,60 |
+| 400 | 100% | **757,30** | **0,2019** | **974,17** | **354,80** | **93,12** | **0,182** | **0,528** | 5,83 |
+| 500 | 20% | 1.655,38 | 0,3976 | 2.051,87 | 826,73 | 19,94 | 5,016 | 0,302 | 0,49 |
+| 500 | 50% | 1.146,19 | 0,2930 | 1.440,84 | 565,91 | 48,99 | 2,041 | 0,436 | 0,56 |
+| 500 | 100% | **933,07** | **0,2497** | **1.185,10** | **452,88** | **95,29** | **0,112** | **0,536** | 0,90 |
+| 600 | 20% | 2.122,40 | 0,5088 | 2.612,29 | 1.021,66 | 19,68 | 5,081 | 0,283 | 0,85 |
+| 600 | 50% | 1.486,67 | 0,3783 | 1.849,42 | 698,54 | 47,71 | 2,096 | 0,404 | 1,29 |
+| 600 | 100% | **1.215,70** | **0,3232** | **1.524,26** | **558,96** | **92,33** | **0,131** | **0,494** | 2,11 |
+| 700 | 20% | 2.242,36 | 0,5381 | 2.756,24 | 1.159,95 | 19,83 | 5,044 | 0,312 | 0,73 |
+| 700 | 50% | 1.549,90 | 0,3958 | 1.925,29 | 794,79 | 48,85 | 2,047 | 0,452 | 1,86 |
+| 700 | 100% | **1.265,28** | **0,3380** | **1.583,74** | **637,46** | **95,33** | **0,092** | **0,553** | 1,28 |
+| 800 | 20% | 2.540,16 | 0,6094 | 3.113,60 | 1.312,54 | 19,80 | 5,051 | 0,315 | 1,10 |
+| 800 | 50% | 1.769,17 | 0,4510 | 2.188,41 | 898,54 | 48,47 | 2,063 | 0,452 | 1,71 |
+| 800 | 100% | **1.440,14** | **0,3842** | **1.793,59** | **721,09** | **94,32** | **0,107** | **0,555** | 1,71 |
+| 900 | 20% | 3.065,60 | 0,7359 | 3.744,13 | 1.461,48 | 19,88 | 5,031 | 0,294 | 0,86 |
+| 900 | 50% | 2.127,51 | 0,5433 | 2.618,43 | 1.000,69 | 48,70 | 2,053 | 0,423 | 2,19 |
+| 900 | 100% | **1.725,95** | **0,4617** | **2.136,55** | **802,66** | **95,22** | **0,088** | **0,521** | 1,77 |
+| 1.000 | 20% | 3.331,27 | 0,7990 | 4.062,94 | 1.602,00 | 19,76 | 5,060 | 0,300 | 2,61 |
+| 1.000 | 50% | 2.313,56 | 0,5900 | 2.841,69 | 1.097,82 | 48,48 | 2,063 | 0,432 | 10,08 |
+| 1.000 | 100% | **1.880,16** | **0,5020** | **2.321,60** | **881,11** | **94,40** | **0,099** | **0,532** | 6,15 |
 
-| Skenario | k | Analitik f1 (s) | CloudSim setelah perbaikan (s) | Selisih |
-|:---:|:---:|---:|---:|---:|
-| S1 (100) | 20% | 362,45 | 367,80 | 1,48% |
-| S1 (100) | 50% | 270,95 | 273,35 | 0,88% |
-| S1 (100) | 100% | 230,90 | 233,08 | 0,94% |
-| S2 (500) | 20% | 1.630,75 | 1.655,38 | 1,51% |
-| S2 (500) | 50% | 1.134,70 | 1.146,19 | 1,01% |
-| S2 (500) | 100% | 925,40 | 933,07 | 0,83% |
-| S3 (1.000) | 20% | 3.278,25 | 3.331,27 | 1,62% |
-| S3 (1.000) | 50% | 2.288,00 | 2.313,56 | 1,12% |
-| S3 (1.000) | 100% | 1.866,35 | 1.880,16 | 0,74% |
+### 6.2 Synthetic 1.000–10.000 Task
 
-Semua konfigurasi kini berada dalam selisih 0,74–1,62% dari f1. Contoh 5 task (bagian 2.4) menghasilkan 90,21 s di CloudSim dibanding 90 s analitik.
+| Task | k | Makespan (s) | Energi (kWh) | Biaya (USD) | Avg response time (s) | Utilisasi (%) | Degree of Imbalance (20 VM) | Throughput (task/s) | Waktu penjadwalan (ms) |
+|---:|:---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1.000 | 20% | 3.368,71 | 0,8093 | 4.107,86 | 1.660,13 | 19,98 | 5,005 | 0,297 | 4,53 |
+| 1.000 | 50% | 2.342,94 | 0,5986 | 2.876,94 | 1.136,67 | 48,99 | 2,041 | 0,427 | 1,51 |
+| 1.000 | 100% | **1.898,59** | **0,5084** | **2.343,72** | **910,90** | **96,26** | **0,068** | **0,527** | 2,78 |
+| 2.000 | 20% | 6.555,52 | 1,5745 | 7.932,04 | 3.241,47 | 19,95 | 5,012 | 0,305 | 10,27 |
+| 2.000 | 50% | 4.509,15 | 1,1543 | 5.476,39 | 2.220,92 | 49,60 | 2,016 | 0,444 | 3,05 |
+| 2.000 | 100% | **3.641,61** | **0,9780** | **4.435,34** | **1.782,68** | **98,16** | **0,036** | **0,549** | 3,69 |
+| 3.000 | 20% | 9.889,06 | 2,3757 | 11.932,28 | 5.028,41 | 19,99 | 5,004 | 0,303 | 3,01 |
+| 3.000 | 50% | 6.813,39 | 1,7441 | 8.241,48 | 3.445,38 | 49,64 | 2,015 | 0,440 | 4,81 |
+| 3.000 | 100% | **5.498,37** | **1,4770** | **6.663,45** | **2.765,82** | **98,50** | **0,025** | **0,546** | 2,12 |
+| 4.000 | 20% | 13.569,76 | 3,2597 | 16.349,12 | 6.721,99 | 19,97 | 5,008 | 0,295 | 4,83 |
+| 4.000 | 50% | 9.318,29 | 2,3866 | 11.247,36 | 4.605,74 | 49,79 | 2,009 | 0,429 | 4,52 |
+| 4.000 | 100% | **7.508,90** | **2,0190** | **9.076,09** | **3.697,24** | **98,91** | **0,021** | **0,533** | 2,59 |
+| 5.000 | 20% | 16.102,78 | 3,8683 | 19.388,75 | 8.075,77 | 19,98 | 5,005 | 0,311 | 8,72 |
+| 5.000 | 50% | 11.067,06 | 2,8341 | 13.345,88 | 5.533,14 | 49,75 | 2,010 | 0,452 | 3,46 |
+| 5.000 | 100% | **8.921,40** | **2,3981** | **10.771,09** | **4.442,93** | **98,94** | **0,018** | **0,560** | 4,52 |
+| 6.000 | 20% | 20.023,90 | 4,8096 | 24.094,09 | 9.866,83 | 19,96 | 5,011 | 0,300 | 12,06 |
+| 6.000 | 50% | 13.757,33 | 3,5227 | 16.574,21 | 6.761,20 | 49,71 | 2,011 | 0,436 | 2,46 |
+| 6.000 | 100% | **11.075,99** | **2,9778** | **13.356,60** | **5.428,41** | **99,02** | **0,016** | **0,542** | 3,98 |
+| 7.000 | 20% | 23.317,97 | 5,6011 | 28.046,98 | 11.663,32 | 19,96 | 5,009 | 0,300 | 5,07 |
+| 7.000 | 50% | 16.024,55 | 4,1032 | 19.294,87 | 7.992,54 | 49,73 | 2,011 | 0,437 | 3,64 |
+| 7.000 | 100% | **12.906,13** | **3,4696** | **15.552,77** | **6.418,09** | **98,99** | **0,016** | **0,542** | 22,79 |
+| 8.000 | 20% | 26.319,90 | 6,3231 | 31.649,29 | 13.218,22 | 19,99 | 5,003 | 0,304 | 5,74 |
+| 8.000 | 50% | 18.082,98 | 4,6315 | 21.764,99 | 9.058,51 | 49,81 | 2,008 | 0,442 | 3,13 |
+| 8.000 | 100% | **14.541,63** | **3,9119** | **17.515,37** | **7.274,23** | **99,37** | **0,012** | **0,550** | 5,63 |
+| 9.000 | 20% | 29.835,18 | 7,1681 | 35.867,63 | 14.996,62 | 19,99 | 5,001 | 0,302 | 4,62 |
+| 9.000 | 50% | 20.484,53 | 5,2478 | 24.646,85 | 10.277,69 | 49,87 | 2,005 | 0,439 | 1,77 |
+| 9.000 | 100% | **16.479,34** | **4,4340** | **19.840,62** | **8.253,47** | **99,44** | **0,012** | **0,546** | 5,07 |
+| 10.000 | 20% | 32.947,10 | 7,9140 | 39.601,93 | 16.341,77 | 19,96 | 5,009 | 0,304 | 5,43 |
+| 10.000 | 50% | 22.637,46 | 5,7967 | 27.230,37 | 11.197,56 | 49,76 | 2,010 | 0,442 | 4,24 |
+| 10.000 | 100% | **18.233,23** | **4,9018** | **21.945,29** | **8.991,59** | **99,10** | **0,014** | **0,548** | 5,76 |
 
-### 6.3 Log Eksekusi
+### 6.3 Diagram Perbandingan
+
+**Makespan vs jumlah task**
+
+![Makespan KPB, GoCJ](docs/figures/gocj_makespan.png)
+
+![Makespan KPB, Synthetic](docs/figures/synthetic_makespan.png)
+
+**Delapan metrik desain** (makespan, energi, biaya, avg response time, utilisasi, DI, throughput, waktu penjadwalan)
+
+![Delapan metrik, GoCJ](docs/figures/gocj_metrics.png)
+
+![Delapan metrik, Synthetic](docs/figures/synthetic_metrics.png)
+
+Diagram dan tabel dibuat ulang dari `grid_summary.csv` dengan:
+
+```bash
+pip install matplotlib
+python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_20261009_225810 \
+                             synthetic=results/sessions/cloudsim_synthetic_20261009_225854
+# -> docs/figures/<nama>_makespan.png, <nama>_metrics.png, <nama>_tables.md
+```
+
+### 6.4 k = 100% vs k = 20% dan CloudSim vs Model Analitik
+
+Kolom "CloudSim / analitik" adalah makespan CloudSim dibagi makespan rumus f1 desain (antrean sekuensial per VM, `max_j Σ L_i / C_j`).
+
+**GoCJ**
+
+| Task | Makespan turun | Energi turun | Biaya turun | Throughput naik | CloudSim / analitik (k = 20 / 50 / 100%) |
+|---:|---:|---:|---:|---:|:---:|
+| 50 | 20,7% | 18,1% | 16,5% | 26,0% | 1,006 / 1,004 / 1,010 |
+| 100 | 36,6% | 31,5% | 31,9% | 57,7% | 1,015 / 1,009 / 1,009 |
+| 200 | 38,8% | 33,2% | 36,1% | 63,6% | 1,013 / 1,008 / 1,007 |
+| 300 | 40,6% | 34,7% | 38,6% | 68,0% | 1,013 / 1,009 / 1,006 |
+| 400 | 42,7% | 36,4% | 41,0% | 74,3% | 1,018 / 1,011 / 1,008 |
+| 500 | 43,6% | 37,2% | 42,2% | 77,5% | 1,015 / 1,010 / 1,008 |
+| 600 | 42,7% | 36,5% | 41,7% | 74,6% | 1,013 / 1,009 / 1,006 |
+| 700 | 43,6% | 37,2% | 42,5% | 77,2% | 1,016 / 1,011 / 1,007 |
+| 800 | 43,3% | 37,0% | 42,4% | 76,2% | 1,015 / 1,012 / 1,009 |
+| 900 | 43,7% | 37,3% | 42,9% | 77,2% | 1,015 / 1,010 / 1,007 |
+| 1.000 | 43,6% | 37,2% | 42,9% | 77,3% | 1,016 / 1,011 / 1,007 |
+
+**Synthetic**
+
+| Task | Makespan turun | Energi turun | Biaya turun | Throughput naik | CloudSim / analitik (k = 20 / 50 / 100%) |
+|---:|---:|---:|---:|---:|:---:|
+| 1.000 | 43,6% | 37,2% | 42,9% | 77,4% | 1,015 / 1,010 / 1,008 |
+| 2.000 | 44,4% | 37,9% | 44,1% | 80,0% | 1,015 / 1,011 / 1,007 |
+| 3.000 | 44,4% | 37,8% | 44,2% | 80,2% | 1,016 / 1,010 / 1,007 |
+| 4.000 | 44,7% | 38,1% | 44,5% | 80,7% | 1,015 / 1,009 / 1,007 |
+| 5.000 | 44,6% | 38,0% | 44,4% | 80,1% | 1,016 / 1,010 / 1,009 |
+| 6.000 | 44,7% | 38,1% | 44,6% | 80,7% | 1,015 / 1,010 / 1,008 |
+| 7.000 | 44,7% | 38,1% | 44,5% | 80,7% | 1,015 / 1,010 / 1,008 |
+| 8.000 | 44,8% | 38,1% | 44,7% | 80,9% | 1,015 / 1,011 / 1,008 |
+| 9.000 | 44,8% | 38,1% | 44,7% | 80,8% | 1,015 / 1,010 / 1,008 |
+| 10.000 | 44,7% | 38,1% | 44,6% | 80,3% | 1,015 / 1,010 / 1,009 |
+
+### 6.5 Log Eksekusi
 
 ```text
 $ mvn -q exec:java -Dexec.args="src/main/resources/dataset/GoCJ_Dataset_500.txt 50"
@@ -362,14 +480,17 @@ cost=$1440.84, schedulingTime=1.182 ms
 mapping=[0, 1, 2, 3, 0, 1, 2, 2, 3, 1, 0, 1, 4, 3, 5, 6, 7, 2, 8, 9, ...]
 ```
 
-Log semua run ada di `results/simulation/log_<dataset>_k<K>.txt`.
+Log setiap run grid ada di folder sesi, `log_n<N>_k<K>_r1.txt`.
 
-### 6.4 Analisis Simulasi
+### 6.6 Analisis Simulasi
 
-1. **k = 100% memberi makespan terendah di ketiga ukuran dataset.** Dibanding k = 20%, makespan turun 36,6% pada S1, 43,6% pada S2, dan 43,5% pada S3.
-2. **Energi dan biaya juga terendah pada k = 100% di matriks ini.** Keenam host tetap dimodelkan aktif, sehingga penurunan makespan mengurangi energi idle dan biaya yang bergantung pada durasi.
-3. **Anomali satu-PE pada V3 sudah teratasi di CloudSim.** Cloudlet memakai semua PE VM tujuan; V3 menjalankan satu Cloudlet pada 4 PE dengan scheduler `SpaceShared`. Makespan seluruh 9 konfigurasi hanya 0,74–1,62% di atas f1, bukan beberapa kali lipat.
-4. **Waktu penjadwalan tetap kecil.** KPB menjadwalkan hingga 1.000 task dalam kurang dari 4 ms pada pengujian ini.
+1. **k = 100% memberi makespan terendah di semua 21 ukuran dataset.** Dibanding k = 20%, makespan turun 20,7% pada GoCJ 50, 36,6% pada GoCJ 100, lalu stabil di 42,7–44,8% mulai 400 task (GoCJ) sampai 10.000 task (Synthetic). Urutan k = 100% < 50% < 20% tidak pernah terbalik.
+2. **Keunggulan k besar makin terasa saat task makin banyak, lalu jenuh.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (hingga 900.000 MI), sehingga tambahan VM lambat kurang membantu; pada GoCJ 50, k = 100% hanya memakai 15 dari 20 VM. Mulai ±400 task, semua VM kandidat selalu sibuk dan rasio makespan k = 100% : k = 20% mendekati rasio kapasitas, yaitu 40.000 MIPS (4 V3) : 72.000 MIPS (20 VM).
+3. **Makespan, energi, biaya, dan avg response naik hampir linear terhadap jumlah task** (terlihat jelas pada Synthetic, yang komposisi task-nya seragam). Pada GoCJ, kenaikannya mengikuti total MI tiap file, bukan jumlah task (bagian 5).
+4. **Utilisasi dan DI ditentukan oleh k.** k = 20% hanya memakai 4 VM V3 (utilisasi ±20%, DI ±5), k = 50% memakai 10 VM (±49%, DI ±2), dan k = 100% memakai 20 VM (94–99% dan DI 0,02–0,13 untuk ≥ 400 task). Throughput ikut stabil: ±0,30 / ±0,44 / ±0,54 task/s.
+5. **Energi dan biaya juga terendah pada k = 100%**, turun 31–38% (energi) dan 32–45% (biaya) dibanding k = 20% untuk ≥ 100 task. Keenam host tetap menyala, sehingga energi idle mendominasi dan energi mengikuti makespan.
+6. **CloudSim sangat dekat dengan model analitik:** 0,4–1,8% di atas f1 di semua 63 run, karena setiap Cloudlet memakai seluruh PE VM tujuan dan scheduler `SpaceShared`.
+7. **Waktu penjadwalan tetap kecil.** KPB menjadwalkan 1.000 task dalam ≤ 10 ms dan 10.000 task dalam ≤ 23 ms (kompleksitas O(N · M log M)).
 
 ---
 
@@ -405,7 +526,7 @@ flowchart LR
 |:---|:---|:---|
 | 20 "VM" | [`realworld/docker-compose.yml`](realworld/docker-compose.yml) | Container `python:3.12-slim`. Batas CPU, jumlah PE, RAM, jaringan DC, dan label host sesuai desain |
 | Worker | [`realworld/worker/worker.py`](realworld/worker/worker.py) | Server HTTP di tiap container dengan `PES` proses PE yang meniru `CloudletSchedulerTimeShared` |
-| Runner | [`realworld/kpb_realworld.py`](realworld/kpb_realworld.py) | Mengambil mapping dari kode Java yang sama dengan simulasi (KPB / HS / CSA), mengeksekusinya, 8 metrik desain, repetisi, ekspor CSV |
+| Runner | [`realworld/kpb_realworld.py`](realworld/kpb_realworld.py) | Mengambil mapping KPB dari kode Java yang sama dengan simulasi, mengeksekusinya, 8 metrik desain, repetisi, ekspor CSV |
 
 ### 7.2 Pemetaan Simulasi → Real World
 
@@ -525,7 +646,17 @@ python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_50
 python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_1000.txt --k 100
 ```
 
-Seluruh 9 kombinasi × 3 repetisi, sama seperti tabel 7.4 (±30 menit). `--quiet` dipakai supaya log tidak berisi ribuan baris per cloudlet:
+**Grid real-world GoCJ 50–1.000** (11 ukuran × 3 k × 3 repetisi = 99 run, urutan acak, `scale` dan `itersPerMI` dikunci, `docker stats` direkam, lalu direkap oleh `analyze_grid.py`):
+
+```bash
+bash run_grid.sh                                  # GoCJ 50..1000, 3 repetisi (beberapa jam)
+SOURCE=synthetic bash run_grid.sh                 # Synthetic 1000 / 5000 / 10000, 1 repetisi
+SCENARIOS="100 200" REPS=1 bash run_grid.sh       # sebagian
+```
+
+Skrip menolak berjalan bila Windows tidak dalam mode daya "Best performance" dengan charger terpasang (`FORCE=1` untuk melewati), karena kecepatan core laptop bisa berubah hingga ±50% antar mode daya.
+
+Seluruh 9 kombinasi S1–S3 × 3 repetisi, sama seperti tabel 7.4 (±30 menit). `--quiet` dipakai supaya log tidak berisi ribuan baris per cloudlet:
 
 ```bash
 SESSION=results/sessions/kpb_$(date +%Y%m%d_%H%M%S)    # satu folder baru per sesi, hasil lama tidak disentuh
@@ -558,13 +689,13 @@ column -s, -t $SESSION/summary.csv | less -S      # satu baris per run
 
 | File | Isi |
 |:---|:---|
-| `aggregate.csv` | Satu baris per konfigurasi: mean dan std 8 metrik, plus `algo`, `seed` |
-| `summary.csv` | Satu baris per run: 8 metrik, skala, prediksi analitik, plus `algo`, `seed`, `evaluations`, `fitness` |
-| `tasks_<dataset>_n<N>_k<K>_run<R>.csv` | Per task (KPB): VM, tipe, DC, host, waktu selesai. HS/CSA: `..._<algo>_seed<S>_run<R>.csv` |
+| `aggregate.csv` | Satu baris per konfigurasi: mean dan std 8 metrik |
+| `summary.csv` | Satu baris per run: 8 metrik, skala, prediksi analitik |
+| `tasks_<dataset>_n<N>_k<K>_run<R>.csv` | Per task: VM, tipe, DC, host, waktu selesai |
 | `mapping_<dataset>.json` | Mapping yang dieksekusi, hasil ekspor Java |
 | `log_<dataset>_k<K>.txt` | Salinan output terminal (bila memakai loop di atas) |
 
-Semua file di atas ada di folder sesi (`--out`, default `results/sessions/<algo>_<timestamp>/`). Hasil lama di `results/*.csv` tidak pernah ditimpa.
+Semua file di atas ada di folder sesi (`--out`, default `results/sessions/kpb_<timestamp>/`). Hasil lama di `results/*.csv` tidak pernah ditimpa.
 
 #### Langkah 8: Mapping sama dengan simulasi
 
@@ -572,8 +703,8 @@ Mapping dihitung oleh `project.Experiment` (Java), kode yang sama dengan simulas
 
 ```bash
 # dari root repo
-mvn -q compile exec:java -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_500.txt --algo csa --seed 1 --no-sim --export-mapping realworld/csa_500_seed1.json"
-cd realworld && python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_500.txt --mapping csa_500_seed1.json
+mvn -q compile exec:java -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_500.txt --k 50 --no-sim --export-mapping realworld/kpb_500_k50.json"
+cd realworld && python3 kpb_realworld.py --dataset ../src/main/resources/dataset/GoCJ_Dataset_500.txt --mapping kpb_500_k50.json
 ```
 
 #### Langkah 9: Matikan container
@@ -600,19 +731,17 @@ docker compose down
 | Argumen | Default | Arti |
 |:---|:---:|:---|
 | `--dataset` | GoCJ 100 | File dataset GoCJ |
-| `--algo` | `kpb` | `kpb`, `hs`, atau `csa` (mapping dihitung oleh Java) |
-| `--k` | 20 | Persen VM kandidat KPB |
-| `--seed`, `--evals`, `--w` | 1, 10000, 0.5 | Seed, budget evaluasi, dan bobot fitness HS/CSA |
-| `--hms --hmcr --par` | 30, 0.99, 0.01 | Parameter HS |
-| `--pop --nselect --beta --mut-min --mut-max --d` | 30, 10, 1.0, 0.01, 0.10, 3 | Parameter CSA |
-| `--mapping` | — | Pakai JSON mapping yang sudah diekspor Java (opsi algoritma diabaikan) |
+| `--k` | 20 | Persen VM kandidat KPB (mapping dihitung oleh Java) |
+| `--mapping` | — | Pakai JSON mapping yang sudah diekspor Java (`--k` diabaikan) |
 | `--repeat` | 3 | Jumlah repetisi (mean ± std dihitung otomatis) |
 | `--iters-per-mi` | 14 | Iterasi CPU per MI (beban per task) |
 | `--scale` | kalibrasi | Kunci skala detik-nyata/detik-simulasi |
 | `--limit` | 0 (semua) | Hanya pakai N task pertama |
-| `--out` | `results/sessions/<algo>_<timestamp>` | Folder sesi |
+| `--out` | `results/sessions/kpb_<timestamp>` | Folder sesi |
 | `--placement` | `../results/simulation/placement.csv` | File penempatan CloudSim untuk verifikasi |
 | `--quiet` | mati | Sembunyikan log broker real-time per cloudlet |
+| `--first-run` | 1 | Nomor run pertama (agar repetisi dari beberapa pemanggilan tidak saling timpa) |
+| `--calibrate-only` | mati | Cetak `scale` hasil kalibrasi lalu keluar |
 
 Contoh output dengan `--quiet` (S2, k = 50%):
 
@@ -658,9 +787,9 @@ rata-rata ± std dari 3 run:
 | S3 (1.000) | 50% | 96,61 | 0,02449 | 61,47 | 47,2% | 2,12 / 0,08 | 10,35 | 181,21 | 7,23 ms |
 | S3 (1.000) | 100% | **80,74** | **0,02139** | **55,26** | 91,8% | 0,13 / 0,13 | **12,38** | **162,17** | 7,10 ms |
 
-DI dihitung dua cara: atas seluruh 20 VM (sesuai definisi desain, dipakai di bagian 6.1) dan hanya atas VM yang terpakai (dalam kurung di output program). Pada k = 100%, keduanya sama karena semua VM terpakai. Energi dan biaya di real world dihitung untuk durasi nyata (detik), jauh lebih kecil daripada simulasi (berskala ±40× lebih lama) — yang bisa dibandingkan adalah **trennya**, bukan angka mutlaknya.
+DI dihitung dua cara: atas seluruh 20 VM (sesuai definisi desain, dipakai di bagian 6.1–6.2) dan hanya atas VM yang terpakai (dalam kurung di output program). Pada k = 100%, keduanya sama karena semua VM terpakai. Energi dan biaya di real world dihitung untuk durasi nyata (detik), jauh lebih kecil daripada simulasi (berskala ±40× lebih lama) — yang bisa dibandingkan adalah **trennya**, bukan angka mutlaknya.
 
-**Real world vs CloudSim.** Prediksi = makespan CloudSim tanpa kontensi RAM/BW (tabel 6.2) × `scale`, karena real world tidak meniru RAM/BW 20% per task (lihat 7.6).
+**Real world vs CloudSim.** Prediksi = makespan analitik f1 (lihat kolom CloudSim / analitik, tabel 6.4) × `scale`, karena real world tidak meniru RAM/BW 20% per task (lihat 7.6).
 
 | Skenario | k | Prediksi dari CloudSim (s) | Nyata (s) | Nyata / prediksi | Proses PE aktif |
 |:---:|:---:|---:|---:|:---:|:---:|
@@ -674,19 +803,21 @@ DI dihitung dua cara: atas seluruh 20 VM (sesuai definisi desain, dipakai di bag
 | S3 (1.000) | 50% | 77,3 | 96,61 | 1,25× | 28 |
 | S3 (1.000) | 100% | 62,2 | 80,74 | 1,30× | 40 |
 
+**Grid real-world GoCJ 50–1.000 (feedback).** Sesi `realworld/results/sessions/gocj_20261009_230602/` (`run_grid.sh`, 99 run) berhenti setelah 37 run, sehingga sebagian sel belum punya data. Karena itu hasilnya belum ditampilkan di sini; hasil feedback (GoCJ 50–1.000 dan Synthetic 1.000–10.000) saat ini berasal dari CloudSim (bagian 6).
+
 ### 7.5 Analisis Real-World
 
 1. **Perilaku KPB terkonfirmasi.** Jumlah VM terpakai selalu sama dengan `s = ⌈k% × 20⌉` (utilisasi ~19% / ~45% / ~90% pada S2–S3), dan DI atas VM terpakai kecil untuk k = 20–50% (0,06–0,80). Penempatan VM, batas PE, dan time-sharing berjalan seperti di CloudSim.
-2. **k = 100% paling cepat di S2 dan S3, sejalan dengan simulasi (bagian 6.1 dan 6.4).** Di S2, 21,9% lebih cepat dari k = 20% (42,09 s vs 53,90 s); di S3, 24,5% lebih cepat (80,74 s vs 106,90 s). Energi, biaya, dan throughput juga paling baik di k = 100% pada kedua skenario itu.
-3. **Pada S1, k = 50% justru sedikit lebih cepat dari k = 100%** (12,25 s vs 13,27 s) — kebalikan dari simulasi, yang tetap menunjukkan k = 100% tercepat (483,76 s). Penyebabnya adalah efek penempatan pada task raksasa, bukan k = 50% yang lebih baik secara umum (lihat 7.7, bagian Anomali).
+2. **k = 100% paling cepat di S2 dan S3, sejalan dengan simulasi (bagian 6.1 dan 6.6).** Di S2, 21,9% lebih cepat dari k = 20% (42,09 s vs 53,90 s); di S3, 24,5% lebih cepat (80,74 s vs 106,90 s). Energi, biaya, dan throughput juga paling baik di k = 100% pada kedua skenario itu.
+3. **Pada S1, k = 50% justru sedikit lebih cepat dari k = 100%** (12,25 s vs 13,27 s) — kebalikan dari simulasi, yang tetap menunjukkan k = 100% tercepat (233,08 s vs 273,35 s pada k = 50%). Penyebabnya adalah efek penempatan pada task raksasa, bukan k = 50% yang lebih baik secara umum (lihat 7.7, bagian Anomali).
 4. **Rasio nyata/prediksi naik seiring makin banyak proses PE aktif** (16 → 28 → 40), dari ±1,0–1,3× menjadi ±1,3–1,7×. Laptop memakai CPU hybrid; makin banyak proses aktif, makin banyak yang terpaksa berjalan di E-core dan LP-E core yang lebih lambat. Overhead ini **tidak sampai membalik urutan** pada run final, berbeda dengan pengujian 3-repetisi awal di S3 yang sempat kena thermal throttling (lihat 7.7, bagian Anomali) — bukti bahwa overhead CPU hybrid konsisten ada, tapi besarnya bergantung kondisi laptop saat itu.
-5. **Biaya dan energi mengikuti makespan.** Karena semua VM dan host dihitung menyala selama makespan, konfigurasi yang paling cepat selalu paling hemat energi dan biaya. Kesimpulannya sama dengan simulasi (bagian 6.4).
+5. **Biaya dan energi mengikuti makespan.** Karena semua VM dan host dihitung menyala selama makespan, konfigurasi yang paling cepat selalu paling hemat energi dan biaya. Kesimpulannya sama dengan simulasi (bagian 6.6).
 6. **Waktu penjadwalan tetap kecil.** KPB di Python menjadwalkan 1.000 task dalam ~5–7 ms.
 
 ### 7.6 Batasan Real-World
 
 - **Container adalah proksi VM, dan host hanyalah label.** Ke-20 container berbagi satu CPU laptop, sehingga ada interferensi (P-core vs E-core, thermal) yang tidak ada di CloudSim.
-- **RAM/BW 20% per task tidak ditiru.** Meniru 20% RAM VM per task (V3: 1,6 GB × ratusan task bersamaan) mustahil di laptop 8 GB. Karena itu, pembanding yang adil adalah CloudSim tanpa kontensi RAM/BW (tabel 6.2), bukan hasil CloudSim utama.
+- **RAM/BW 20% per task tidak ditiru.** Meniru 20% RAM VM per task (V3: 1,6 GB × ratusan task bersamaan) mustahil di laptop 8 GB. Karena itu, pembanding yang adil adalah makespan analitik f1 (tabel 6.4), bukan hasil CloudSim utama.
 - **Bandwidth dan transfer file 300 KB tidak ditiru.** Container tidak dibatasi bandwidth jaringannya.
 - **Energi adalah estimasi**: model daya desain diterapkan pada CPU terukur dari cgroup. Tidak ada power meter atau RAPL di WSL2.
 - **Repetisi**: tabel 7.4 memakai 1 run per konfigurasi (run final, paling valid). Pengujian awal memakai 3 repetisi (bukan 10× seperti protokol desain, supaya selesai dalam ±30 menit), yang mengungkap ketidakstabilan di S3 — dibahas di 7.7.
@@ -713,7 +844,7 @@ Ringkasan dari hasil 7.4, ditambah dua temuan yang tidak langsung terlihat dari 
 #### Anomali
 
 - **100 task: k = 50% lebih cepat dari k = 100%.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (900.000 MI). Di k = 100%, task 900.000 MI kebetulan berjalan sendirian di akhir sehingga paling lama selesai. Ini efek penempatan, bukan karena k = 50% lebih baik, dan polanya hilang di 500/1000 task.
-- **Model satu-PE tetap berlaku untuk runner Docker, bukan CloudSim.** Worker Docker menjalankan satu task pada satu PE; karena itu V3 dapat menyisakan PE ketika task yang aktif kurang dari empat. Di CloudSim masalah satu-PE sudah diperbaiki: setiap Cloudlet memakai seluruh PE VM tujuan. Validasi CloudSim terbaru untuk 9 kombinasi menunjukkan makespan hanya 0,74–1,62% di atas f1 (bagian 6.2).
+- **Model satu-PE tetap berlaku untuk runner Docker, bukan CloudSim.** Worker Docker menjalankan satu task pada satu PE; karena itu V3 dapat menyisakan PE ketika task yang aktif kurang dari empat. Di CloudSim masalah satu-PE sudah diperbaiki: setiap Cloudlet memakai seluruh PE VM tujuan. Grid CloudSim (63 run) menunjukkan makespan hanya 0,4–1,8% di atas f1 (bagian 6.4).
 - **Pengujian awal (3 repetisi) untuk 1000 task tidak stabil** (std makespan sampai ±23,5 s, urutan sempat tidak sesuai teori — data ini ada di `realworld/results/aggregate.csv` baris `runs=3`, bukan di tabel 7.4). Setelah diuji ulang dalam kondisi laptop yang lebih terkontrol (tabel 7.4, baris `runs=1`), hasilnya kembali sesuai teori. Dugaan penyebab: beban laptop, suhu, dan CPU hybrid (core cepat + core lambat) — lihat bagian 7.6.
 - **Keunggulan k = 100% lebih kecil dari teori** (1,3× di S3 vs perkiraan ~2× berdasarkan rasio MIPS). Dugaan: saat 20 container aktif bersamaan, sebagian tetap berjalan di core laptop yang lebih lambat (lihat rasio nyata/prediksi di tabel 7.4, naik seiring jumlah proses PE aktif). Artinya hasil ini cenderung **konservatif** — di infrastruktur fisik sungguhan (bukan laptop berbagi satu CPU), keunggulan k = 100% kemungkinan lebih besar lagi.
 
@@ -775,19 +906,22 @@ for n in 100 500 1000; do for k in 20 50 100; do
 done; done
 ```
 
-#### KPB, Harmony Search, dan Clonal Selection (mode flag)
+#### Mode flag dan grid eksperimen
 
 Begitu ada argumen yang diawali `--`, setiap run ditulis ke folder sesi baru (`--out`, default `results/sessions/<timestamp>/`), bukan ke `results/simulation/`. Daftar opsi lengkap: `mvn -q exec:java -Dexec.args="--help"`.
 
 ```bash
-mvn -q exec:java -Dlog=error -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_500.txt --algo csa --seed 1 --evals 10000"
-mvn -q exec:java -Dlog=error -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_500.txt --algo hs --seed 1 --hmcr 0.99 --par 0.01"
+mvn -q exec:java -Dlog=error -Dexec.args="--dataset src/main/resources/dataset/Synthetic_Dataset_5000.txt --k 50"
 
-# Eksperimen lengkap: KPB k=100% vs HS vs CSA (seed 1-5) pada GoCJ 100/500/1000, lalu rekap mean ± std
-bash scripts/run_cloudsim_experiment.sh
+# Grid lengkap bagian 6 (folder sesi baru, lalu rekap grid_summary.csv)
+SOURCE=gocj bash scripts/run_grid_cloudsim.sh         # GoCJ 50..1000 x k 20/50/100 (±1 menit)
+SOURCE=synthetic bash scripts/run_grid_cloudsim.sh    # Synthetic 1000..10000 x k 20/50/100 (±2-3 menit)
+
+# Diagram dan tabel (bagian 6.3)
+python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_<timestamp> synthetic=results/sessions/cloudsim_synthetic_<timestamp>
 ```
 
-Selain metrik di bawah, mode flag mencetak `algo=..., seed=..., evaluations=..., fitness=..., schedulingTime=...`. `fitness` = 0,5 × makespan/makespan KPB k=100% + 0,5 × energi/energi KPB k=100% (lebih kecil lebih baik; KPB k=100% = 1,0). Folder sesi berisi `summary.csv` (kolom lama + `algo, seed, evaluations, fitness`), `cloudlets_*.csv`, `convergence_*.csv` (HS/CSA), `mapping_*.json`, `placement.csv`, dan `recap.md`/`recap.csv` dari `scripts/summarize_session.py`.
+Folder sesi berisi `summary.csv`, `cloudlets_*.csv`, `mapping_*.json`, `placement.csv`, `log_n<N>_k<K>_r<R>.txt`, dan `grid_summary.csv` (mean ± std per (task, k), rasio CloudSim/analitik, CV) dari `realworld/analyze_grid.py`.
 
 ### Langkah 3: Membaca output
 
@@ -833,7 +967,7 @@ vmFinish=[360.21, 240.21, 180.21, 120.21, 0.0, ...]
 
 | Field | Arti |
 |:---|:---|
-| `Infrastruktur CloudSim` | Spesifikasi DC, host, dan VM yang **dibaca dari objek CloudSim** setelah run, beserta penempatan VM → host hasil `VmAllocationPolicySimple` + batasan C3–C6. Bandingkan dengan tabel 3.1–3.3 |
+| `Infrastruktur CloudSim` | Spesifikasi DC, host, dan VM yang **dibaca dari objek CloudSim** setelah run, beserta penempatan VM → host hasil `VmAllocationPolicySimple` + batasan C3–C6. Bandingkan dengan tabel 3.1–3.4 |
 | `vmsCreated`, `cloudletsFinished` | Validasi: harus 20/20 dan N/N (bila tidak, program berhenti dengan error) |
 | `makespan` | Waktu selesai cloudlet terakhir di CloudSim; `analitik` = rumus f1 desain |
 | `energy` | Energi 6 host dari 0 sampai makespan (kWh) |
@@ -846,7 +980,7 @@ vmFinish=[360.21, 240.21, 180.21, 120.21, 0.0, ...]
 | `mapping[i]` | VM tujuan task ke-i (lihat tabel 3.3) |
 | `vmFinish[j]` | Waktu selesai task terakhir di VM ke-j; 0 berarti VM tidak dipakai |
 
-Tabel `Infrastruktur CloudSim` dibaca langsung dari objek CloudSim setelah run, sehingga bisa dibandingkan baris demi baris dengan tabel desain di bagian 3.1–3.3. Mapping pada contoh 5 task sama dengan hitungan manual di bagian 2.4, dan perilaku `vmFinish` (VM mana yang terpakai) sama dengan tabel di bagian 2.5.
+Tabel `Infrastruktur CloudSim` dibaca langsung dari objek CloudSim setelah run, sehingga bisa dibandingkan baris demi baris dengan tabel desain di bagian 3.1–3.4. Mapping pada contoh 5 task sama dengan hitungan manual di bagian 2.4, dan perilaku `vmFinish` (VM mana yang terpakai) sama dengan tabel di bagian 2.5.
 
 Program memvalidasi dirinya sendiri setiap run ([`SimulationSetup.validate()`](src/main/java/project/setup/SimulationSetup.java)). Kalau ada bagian yang salah, program berhenti sebelum mencetak metrik, dengan salah satu pesan berikut:
 
@@ -892,8 +1026,7 @@ soka-a-5/
 │   │   │   └── GoCJLoader.java            ← Loader dataset GoCJ
 │   │   ├── model/
 │   │   │   ├── ScheduleContext.java       ← Topologi host + task
-│   │   │   ├── ScheduleEvaluator.java     ← Model analitik f1 + energi
-│   │   │   └── FitnessFunction.java       ← Fitness HS/CSA
+│   │   │   └── ScheduleEvaluator.java     ← Model analitik f1 + energi
 │   │   ├── metrics/
 │   │   │   ├── MetricsCollector.java      ← 8 metrik desain
 │   │   │   ├── EnergyMeter.java           ← Integrasi daya host (kWh)
@@ -905,25 +1038,32 @@ soka-a-5/
 │   │       ├── SimulationSetup.java       ← Broker, cloudlet, binding, validasi
 │   │       └── CloudSimAdapter.java
 │   └── resources/dataset/
-│       ├── GoCJ_Dataset_100.txt
-│       ├── GoCJ_Dataset_500.txt
-│       ├── GoCJ_Dataset_1000.txt
+│       ├── GoCJ_Dataset_50_subset.txt     ← 50 task pertama GoCJ 100
+│       ├── GoCJ_Dataset_<100..1000>.txt   ← GoCJ resmi
+│       ├── Synthetic_Dataset_<1000..10000>.txt ← Bootstrap dari GoCJ
 │       └── dataset.txt                    ← 5 task contoh
 │
 ├── docs/
-│   └── gap-analysis.md                    ← Draft desain vs implementasi
+│   ├── gap-analysis.md                    ← Draft desain vs implementasi
+│   └── figures/                           ← Diagram + tabel bagian 6 (plot_grid.py)
 │
-├── results/simulation/
-│   ├── summary.csv                        ← 8 metrik per run
-│   ├── placement.csv                      ← VM → DC/host
-│   ├── cloudlets_<dataset>_k<K>.csv       ← Detail per cloudlet
-│   └── log_<dataset>_k<K>.txt             ← Output terminal
+├── scripts/
+│   ├── run_grid_cloudsim.sh               ← Grid CloudSim GoCJ / Synthetic × k
+│   ├── plot_grid.py                       ← Diagram dan tabel dari grid_summary.csv
+│   └── power_state.sh                     ← Cek mode daya Windows (real world)
+│
+├── results/
+│   ├── sessions/cloudsim_<sumber>_<ts>/   ← Grid CloudSim bagian 6
+│   └── simulation/                        ← Run mode lama (dataset k)
 │
 └── realworld/
     ├── docker-compose.yml                 ← 20 container "VM", 2 jaringan DC
     ├── worker/
     │   └── worker.py                      ← Worker time-shared dengan PE
     ├── kpb_realworld.py                   ← ★ KPB real world: jadwalkan, eksekusi, ukur
+    ├── run_grid.sh                        ← Grid real-world GoCJ / Synthetic × k
+    ├── analyze_grid.py                    ← Rekap grid (CloudSim dan real world)
+    ├── generate_synthetic.py              ← Pembuat Synthetic_Dataset_<N>.txt
     └── results/
         ├── summary.csv                    ← 8 metrik per run
         ├── aggregate.csv                  ← Mean ± std per konfigurasi
@@ -943,6 +1083,10 @@ soka-a-5/
 | 4. Ujicoba dataset minggu 3 (S1–S3) | ✅ 9 kombinasi, 8 metrik (bagian 6) |
 | 5. Implementasi KPB di real world | ✅ 20 container mengikuti spesifikasi VM, PE, dan penempatan desain (bagian 7) |
 | 6. Ujicoba real world | ✅ 9 kombinasi × 3 repetisi, mean ± std (bagian 7.4) |
+| 7. Feedback: tabel arsitektur datacenter | ✅ Tabel 3.1–3.4, termasuk penempatan VM per host |
+| 8. Feedback: uji GoCJ 100, 200, …, 1.000 | ✅ CloudSim, ditambah GoCJ 50, 33 run (bagian 6.1) |
+| 9. Feedback: dataset synthetic 1.000, 2.000, …, 10.000 | ✅ Dibuat (bagian 5) dan diuji di CloudSim, 30 run (bagian 6.2) |
+| 10. Feedback: diagram perbandingan makespan dkk. | ✅ Makespan + 8 metrik, GoCJ dan Synthetic (bagian 6.3) |
 
 Penyimpangan dari Draft Desain dan alasannya (analisis lengkap, termasuk bagian desain yang kurang tepat untuk diterapkan, ada di [`docs/gap-analysis.md`](docs/gap-analysis.md)):
 
@@ -962,7 +1106,7 @@ Asumsi yang tetap berlaku (Desain bagian 4.5): tanpa migrasi VM, tanpa kegagalan
 
 KPB adalah algoritma yang cepat dan sederhana, sehingga cocok digunakan sebagai *baseline penjadwalan task independen* pada sistem *heterogen*. 
 
-Pada infrastruktur dengan heterogenitas konsisten, urutan VM tercepat sama untuk semua task. Hasil uji CloudSim untuk 100, 500, dan 1.000 task menunjukkan k = 100% (setara MCT) menghasilkan makespan terendah. 
+Pada infrastruktur dengan heterogenitas konsisten, urutan VM tercepat sama untuk semua task. Hasil uji CloudSim untuk GoCJ 50–1.000 task dan Synthetic 1.000–10.000 task menunjukkan k = 100% (setara MCT) selalu menghasilkan makespan terendah, sekitar 43–45% lebih rendah dari k = 20% mulai 400 task, dan keunggulan ini tetap stabil hingga 10.000 task. 
 
 Keunggulan khas KPB lebih relevan ketika jenis task beragam dan urutan VM terbaik dapat berubah menurut karakteristik task. Dalam kondisi itu, pemilihan subset kandidat k% memberi kompromi antara cakupan kandidat dan biaya pencarian. Temuan k = 100% di sini adalah hasil untuk desain dan objective makespan yang diuji, bukan jaminan bahwa nilai tersebut selalu terbaik pada infrastruktur lain.
 
