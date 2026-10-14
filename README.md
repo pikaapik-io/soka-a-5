@@ -153,7 +153,7 @@ Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menent
 
 Arsitektur terdiri atas dua datacenter dengan karakter berbeda: satu berorientasi kinerja dan satu berorientasi efisiensi energi.
 
-Arsitektur ini dibangun di **CloudSim Plus 6.6.1** sesuai Draft Desain Project bagian 2. Penempatan VM pada gambar adalah hasil CloudSim yang sebenarnya (`results/simulation/placement.csv`). Tabel 3.1–3.4 merangkum isi gambar yang sama.
+Arsitektur ini dibangun di **CloudSim Plus 6.6.1** sesuai Draft Desain Project bagian 2. Penempatan VM pada gambar adalah hasil CloudSim yang sebenarnya (`results/simulation/placement.csv`). Tabel 3.1–3.5 merangkum isi gambar yang sama.
 
 ```mermaid
 flowchart TD
@@ -225,7 +225,19 @@ Hasil CloudSim (`VmAllocationPolicySimple` + batasan C3–C6), sama dengan gamba
 | DC-2 Efficiency | B2 | B | vm10 V2, vm13 V1, vm15 V1, vm18 V1 | 5 / 8 | 6,000 / 14,400 |
 | **Total** | **6** | — | **20 VM** | **40 / 48** | **72,000 / 115,200** |
 
-### 3.5 Batasan Keras (Desain bagian 4.3)
+### 3.5 Pembagian Host dan VM per Datacenter
+
+Ringkasan tabel 3.4 per datacenter: host apa saja yang ada di tiap DC, VM apa saja yang berjalan di sana, dan berapa PE yang dipakai.
+
+| Datacenter | Host | PE host | VM yang ditempatkan | Jumlah VM | PE VM terpakai / PE host | MIPS VM / MIPS host |
+|:---|:---|:---:|:---|:---:|:---:|:---:|
+| DC-1 Performance | A0, A1, A2 (3 × Tipe A) | 3 × 8 = 24 PE (@ 3,000 MIPS) | V3 Large: vm00–vm03 (4 PE/VM)<br/>V2 Medium: vm04–vm07 (2 PE/VM) | 8 (4 V3 + 4 V2) | 24 / 24 (100%) | 52,000 / 72,000 |
+| DC-2 Efficiency | B0, B1, B2 (3 × Tipe B) | 3 × 8 = 24 PE (@ 1,800 MIPS) | V2 Medium: vm08–vm11 (2 PE/VM)<br/>V1 Small: vm12–vm19 (1 PE/VM) | 12 (4 V2 + 8 V1) | 16 / 24 (67%) | 20,000 / 43,200 |
+| **Total** | **6 host** | **48 PE** | **V3 × 4, V2 × 8, V1 × 8** | **20** | **40 / 48** | **72,000 / 115,200** |
+
+DC-1 terisi penuh (24/24 PE) karena keempat V3 hanya muat di host Tipe A (batasan C6), sehingga DC-1 menampung 72% kapasitas VM (52,000 dari 72,000 MIPS) dengan 8 VM. DC-2 menampung VM yang lebih kecil tetapi lebih banyak (12 VM) dan masih menyisakan 8 PE.
+
+### 3.6 Batasan Keras (Desain bagian 4.3)
 
 | Kode | Batasan | Cara dipenuhi di kode |
 |:---:|:---|:---|
@@ -590,10 +602,21 @@ Tabel berikut membandingkan kedua rumus itu dengan hasil CloudSim:
 
 Untuk Synthetic dan GoCJ ≥ 400 task, CloudSim hanya 1–4% di atas rumus kapasitas, sehingga bentuk grafik 6.1–6.8 bisa diturunkan langsung dari kedua rumus ini. Makespan naik lurus dengan kemiringan rata-rata L / C (±3.3, ±2.3, dan ±1.8 detik per task untuk k = 20%, 50%, 100%). Throughput mendatar di C / rata-rata L. Selisih makespan mendatar di 1 − C(20%) / C(k). Pada task sedikit (GoCJ 50–300), rumus ini meleset jauh (GoCJ 50, k = 100%: CloudSim 168.8 s vs rumus 95.9 s) karena beban tidak bisa dibagi rata: satu task 900,000 MI saja sudah butuh 90 s di VM tercepat.
 
-**Kesimpulan bagian 6.**
-- k = 100% memberi makespan, energi, biaya, response time, utilisasi, DI, dan throughput terbaik di semua 21 ukuran dataset.
-- Keunggulannya bisa dihitung di awal: 1 − 40,000 / 72,000 = 44.4% lebih cepat dari k = 20% bila task cukup banyak.
-- Pada desain dengan heterogenitas konsisten ini, k hanya menentukan berapa besar kapasitas yang boleh dipakai. Membatasi k tidak memberi keuntungan pada metrik mana pun, karena semua host tetap menyala.
+### 6.7 Analisis Grafik
+
+Kesembilan grafik di bagian 6.5 dapat dibaca sebagai satu cerita: **semua metrik dikendalikan oleh kapasitas kolam VM yang dibuka oleh k** (40,000 / 58,000 / 72,000 MIPS), bukan oleh jenis dataset.
+
+| Kelompok grafik | Pola | Arti |
+|:---|:---|:---|
+| Makespan, energi, biaya, avg response time (6.1, 6.3, 6.4, 6.5) | Naik lurus terhadap jumlah task; jarak antar garis k makin lebar | Metrik "total" ini sebanding dengan ΣL / C, jadi keuntungan k besar bertambah seiring beban |
+| Selisih makespan, utilisasi, DI, throughput (6.2, 6.6, 6.7, 6.8) | Mendatar di nilai tetap per k | Metrik "rasio" ini hanya ditentukan berapa VM yang dipakai (4 / 10 / 20 VM), tidak bergantung jumlah task |
+| Waktu penjadwalan (6.9) | Acak, 0.1–23 ms | Overhead KPB dapat diabaikan (< 0.001% dari makespan) |
+
+- **Urutan k konsisten.** Di 8 grafik metrik kinerja, k = 100% selalu terbaik, disusul 50% lalu 20%, pada seluruh 21 ukuran dataset. Tidak ada garis yang bersilangan.
+- **Besar keunggulan dapat diprediksi.** Dibanding k = 20%, k = 100% memangkas makespan ±44%, response time ±45%, biaya ±43–45%, dan energi ±37–38%, serta menaikkan throughput ±77–81% (untuk ≥ 400 task). Energi turun paling sedikit karena daya idle host dan energi kerja task tetap sama untuk semua k.
+- **Tidak ada trade-off.** Konsolidasi (k kecil) tidak menghemat energi maupun biaya, karena keenam host dan ke-20 VM tetap dihitung menyala; makespan yang lebih panjang justru menambah keduanya.
+- **GoCJ dan Synthetic memberi kesimpulan yang sama.** Penyimpangan hanya muncul di GoCJ kecil (50–300 task), ketika beberapa task raksasa mendominasi makespan sehingga keunggulan k = 100% mengecil, serta "tangga" GoCJ akibat total MI tiap file tidak sebanding dengan jumlah task-nya. Pada Synthetic semua garis mulus.
+- **Kesimpulan:** pada desain dengan heterogenitas VM konsisten ini, k = 100% adalah pilihan terbaik untuk semua metrik; membatasi k hanya mengurangi kapasitas yang boleh dipakai tanpa memberi keuntungan apa pun.
 
 ---
 
@@ -1083,7 +1106,7 @@ vmFinish=[360.21, 240.21, 180.21, 120.21, 0.0, ...]
 | `mapping[i]` | VM tujuan task ke-i (lihat tabel 3.3) |
 | `vmFinish[j]` | Waktu selesai task terakhir di VM ke-j; 0 berarti VM tidak dipakai |
 
-Tabel `Infrastruktur CloudSim` dibaca langsung dari objek CloudSim setelah run, sehingga bisa dibandingkan baris demi baris dengan tabel desain di bagian 3.1–3.4. Mapping pada contoh 5 task sama dengan hitungan manual di bagian 2.4, dan perilaku `vmFinish` (VM mana yang terpakai) sama dengan tabel di bagian 2.5.
+Tabel `Infrastruktur CloudSim` dibaca langsung dari objek CloudSim setelah run, sehingga bisa dibandingkan baris demi baris dengan tabel desain di bagian 3.1–3.5. Mapping pada contoh 5 task sama dengan hitungan manual di bagian 2.4, dan perilaku `vmFinish` (VM mana yang terpakai) sama dengan tabel di bagian 2.5.
 
 Program memvalidasi dirinya sendiri setiap run ([`SimulationSetup.validate()`](src/main/java/project/setup/SimulationSetup.java)). Kalau ada bagian yang salah, program berhenti sebelum mencetak metrik, dengan salah satu pesan berikut:
 
