@@ -35,10 +35,12 @@
   - [7.6 Batasan Real-World](#76-batasan-real-world)
   - [7.7 Kesimpulan Real-World](#77-kesimpulan-real-world)
 - [8. Panduan Menjalankan Sim](#8-panduan-menjalankan-sim)
-- [9. Struktur Direktori](#9-struktur-direktori)
-- [10. Status dan Batasan](#10-status-dan-batasan)
-- [11. Kesimpulan KPB](#11-kesimpulan-kpb)
-- [12. Referensi](#12-referensi)
+- [9. Panduan Mengubah Datacenter, Host, dan VM](#9-panduan-mengubah-datacenter-host-dan-vm)
+- [10. Struktur Direktori](#10-struktur-direktori)
+- [11. Status dan Batasan](#11-status-dan-batasan)
+- [12. Kesimpulan KPB](#12-kesimpulan-kpb)
+- [13. Referensi](#13-referensi)
+- [14. Hasil Perubahan](#14-hasil-perubahan)
 
 ---
 
@@ -150,6 +152,8 @@ Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menent
 ---
 
 ## 3. Arsitektur Datacenter
+
+> **Catatan:** bagian ini mendokumentasikan desain awal (2 datacenter × 3 host, 20 VM). Kode sekarang memakai topologi 3 datacenter × 2 host, 28 VM. Lihat [bagian 14. Hasil Perubahan](#14-hasil-perubahan).
 
 Arsitektur terdiri atas dua datacenter dengan karakter berbeda: satu berorientasi kinerja dan satu berorientasi efisiensi energi.
 
@@ -1136,7 +1140,232 @@ done
 
 ---
 
-## 9. Struktur Direktori
+## 9. Panduan Mengubah Datacenter, Host, dan VM
+
+Bagian ini dipakai bila diminta mengubah infrastruktur: menambah atau mengurangi datacenter, mengubah jumlah host, atau menambah dan mengurangi VM.
+
+Di simulasi, infrastruktur hanya didefinisikan di dua file: [`DatacenterFactory.java`](src/main/java/project/setup/DatacenterFactory.java) (datacenter dan host) dan [`VmFactory.java`](src/main/java/project/setup/VmFactory.java) (VM). Kode lain (KPB, `ScheduleContext`, `ConstrainedPlacement`, `EnergyMeter`, `MetricsCollector`) membaca infrastruktur dari objek CloudSim, jadi otomatis mengikuti. Yang **tidak** otomatis ikut berubah: kode real-world (salinan manual, bagian 9.7) dan tabel README bagian 3.
+
+### 9.1 Peta Perubahan
+
+| Yang diubah | Simulasi (Java) | Real-world (`realworld/`) |
+|:---|:---|:---|
+| Jumlah host per DC | `DatacenterFactory.createAll()` / `create()` | `HOSTS` di `kpb_realworld.py` |
+| Tambah / kurangi DC | `DatacenterFactory.createAll()` | `DATACENTERS` di `kpb_realworld.py`, `networks` di `docker-compose.yml` |
+| Tipe host baru | enum `HostType`, `typeOf()`, nama DC di `Experiment.printInfrastructure()` | `HOST_TYPES` di `kpb_realworld.py` |
+| Jumlah VM per tipe | `count` di enum `VmType` | `VMS`, `PLACEMENT` di `kpb_realworld.py`, service `vmNN` di `docker-compose.yml`, `tier()` di `analyze_grid.py` |
+| Tipe VM baru | konstanta baru di enum `VmType` | `VM_TYPES` + semua baris di atas |
+
+### 9.2 Aturan yang Perlu Dipahami Dulu
+
+1. **Urutan datacenter = prioritas penempatan.** `ConstrainedPlacement.planHosts` menaruh setiap VM di datacenter **pertama** yang masih punya host cocok. Datacenter berikutnya baru dipakai setelah datacenter sebelumnya penuh. Akibatnya, DC baru yang ditaruh di akhir list bisa tidak mendapat VM sama sekali, tetapi host-nya tetap dihitung energi idle-nya (`EnergyMeter` menjumlahkan **semua** host dari 0 sampai makespan). Hasilnya energi naik, makespan tidak berubah.
+2. **Urutan VM = urutan deklarasi `VmType`.** ID VM sama dengan indeks list (0, 1, 2, …), dan `mapping[i]` hasil KPB menunjuk indeks ini. VM terbesar dideklarasikan lebih dulu agar mendapat host tercepat.
+3. **Semua VM harus muat** (batasan C3–C6, bagian 3.6). Bila tidak muat, simulasi berhenti dengan `IllegalStateException: No host can fit VM <id>`. Cek kasar sebelum menjalankan:
+   - Σ PE semua VM ≤ Σ PE semua host (saat ini 48 ≤ 48, semua host sudah penuh, jadi menambah VM wajib disertai menambah host),
+   - Σ RAM dan Σ BW VM muat di host,
+   - VM dengan MIPS/PE tinggi butuh host dengan MIPS/PE ≥ miliknya (V3 2,500 MIPS/PE hanya muat di host Tipe A 3,000, **tidak** di Tipe B 1,800).
+4. **Tipe host dikenali dari MIPS per PE** (`DatacenterFactory.typeOf`). Setiap tipe host wajib punya MIPS/PE yang berbeda. `typeOf` sudah memeriksa semua konstanta `HostType` (A, B, C) dan melempar `IllegalArgumentException` bila MIPS/PE tidak dikenal (bagian 9.4).
+5. **Jumlah kandidat KPB ikut jumlah VM**: s = ceil(k% × m). Contohnya k = 20% dengan 20 VM menghasilkan 4 kandidat, dengan 24 VM menghasilkan 5 kandidat.
+
+### 9.3 Mengubah Jumlah Host
+
+**Cara cepat (semua DC sama banyak):** ubah konstanta di `DatacenterFactory.java`:
+
+```java
+private static final int HOSTS_PER_DATACENTER = 3;   // misalnya jadi 4 -> 2 DC x 4 host = 8 host
+```
+
+**Cara fleksibel (jumlah host berbeda per DC, disarankan):** tambahkan parameter `hostCount` ke `create()`, lalu hapus konstanta `HOSTS_PER_DATACENTER`.
+
+```java
+// createAll(): argumen ke-3 = jumlah host di datacenter itu
+datacenters.add(create(simulation, HostType.A_PERFORMANCE, 3, 0.05, 0.02, 0.001, 0.005));
+datacenters.add(create(simulation, HostType.B_EFFICIENCY, 4, 0.03, 0.01, 0.0008, 0.003));
+
+// create(): tambahkan parameter hostCount dan pakai di loop pembuatan host
+private static Datacenter create(CloudSim simulation, HostType type, int hostCount, double costPerSecond,
+                                 double costPerGbRam, double costPerGbStorage, double costPerBw) {
+    List<Host> hosts = new ArrayList<>();
+    for (int i = 0; i < hostCount; i++) {
+        hosts.add(createHost(type));
+    }
+    ...
+```
+
+Mengurangi host caranya sama (angkanya diperkecil), dengan syarat semua VM tetap muat (aturan 3).
+
+### 9.4 Menambah Datacenter
+
+**a. DC baru memakai tipe host yang sudah ada (A atau B):** cukup tambahkan satu baris di `createAll()`.
+
+```java
+datacenters.add(create(simulation, HostType.B_EFFICIENCY, 2, 0.03, 0.01, 0.0008, 0.003));  // DC-3
+```
+
+**b. DC baru dengan tipe host baru.** Langkah di bawah adalah cara Tipe C "Balanced" 8 PE × 2,400 MIPS ditambahkan (bagian 14). Langkah 2 dan 4 sudah diterapkan di kode. Untuk tipe berikutnya (misalnya Tipe D), cukup langkah 1 dan 3, ditambah satu cabang nama di langkah 4:
+
+1. Tambahkan konstanta di enum `HostType` (urutan argumen: PE, MIPS/PE, RAM MB, BW Mbps, storage MB, **P max, lalu P idle**). MIPS/PE harus berbeda dari tipe lain.
+
+   ```java
+   B_EFFICIENCY(8, 1_800, 32_768, 5_000, 1_000_000, 120, 72),
+   C_BALANCED(8, 2_400, 32_768, 8_000, 1_000_000, 180, 110);
+   ```
+
+2. Ganti isi `typeOf()` agar mengenali semua tipe (bukan hanya A/B):
+
+   ```java
+   public static HostType typeOf(Host host) {
+       for (HostType type : HostType.values()) {
+           if (host.getMips() == type.mipsPerPe) {
+               return type;
+           }
+       }
+       throw new IllegalArgumentException("Tipe host tidak dikenal: " + host.getMips() + " MIPS/PE");
+   }
+   ```
+
+3. Daftarkan DC-nya di `createAll()`:
+
+   ```java
+   datacenters.add(create(simulation, HostType.C_BALANCED, 2, 0.04, 0.015, 0.0009, 0.004));
+   ```
+
+4. Perbaiki nama DC yang dicetak di [`Experiment.java`](src/main/java/project/Experiment.java) (`printInfrastructure`). Tipe yang tidak disebut di sini dicetak "Efficiency":
+
+   ```java
+   DatacenterFactory.HostType type = DatacenterFactory.typeOf(dc.getHost(0));
+   String name = type == DatacenterFactory.HostType.A_PERFORMANCE ? "Performance"
+           : type == DatacenterFactory.HostType.B_EFFICIENCY ? "Efficiency" : "Balanced";
+   ```
+
+**Posisi DC di list menentukan apakah DC itu terpakai** (aturan 1). Contoh uji: DC-3 Tipe C (2 host) ditambahkan di akhir dengan 20 VM bawaan menghasilkan DC-3 dengan 0 VM (`PE terpakai 0/8`), karena DC-1 dan DC-2 masih cukup. Agar DC baru benar-benar dipakai, pilih salah satu:
+- taruh DC baru lebih awal di list (misalnya sebelum DC-2), atau
+- tambah VM sampai DC sebelumnya penuh (bagian 9.6), atau
+- kurangi host di DC sebelumnya.
+
+### 9.5 Mengurangi Datacenter
+
+Hapus baris DC yang bersangkutan di `createAll()`, lalu pastikan semua VM tetap muat. Contoh yang sudah diuji (pada desain awal 2 DC × 3 host, 20 VM):
+
+| Perubahan | Hasil |
+|:---|:---|
+| Hapus DC-2, DC-1 tetap 3 host Tipe A | ❌ `No host can fit VM 8`: DC-1 hanya 24 PE, sedangkan 20 VM butuh 40 PE |
+| Hapus DC-2, DC-1 jadi 5 host Tipe A | ✅ 20/20 VM dibuat, kelima host terisi 8/8 PE |
+| Hapus DC-1 | ❌ V3 (2,500 MIPS/PE) tidak muat di host Tipe B (C6). Kurangi atau hapus V3, atau tambahkan host dengan MIPS/PE ≥ 2,500 |
+
+### 9.6 Menambah atau Mengurangi VM
+
+**Mengubah jumlah VM:** ubah argumen pertama (`count`) di enum `VmType` ([`VmFactory.java`](src/main/java/project/setup/VmFactory.java)):
+
+```java
+V3_LARGE(4, 4, 2_500, 8_192, 1_000),
+V2_MEDIUM(8, 2, 1_500, 4_096, 1_000),
+V1_SMALL(12, 1, 1_000, 2_048, 500);   // 8 -> 12: total jadi 24 VM
+```
+
+Contoh uji di atas (pada desain awal) menghasilkan 24/24 VM dibuat, dan VM 20–23 (V1 tambahan) ditempatkan di DC-2 karena DC-1 sudah penuh. Indeks VM bergeser sesuai urutan tipe: VM 0–3 = V3, 4–11 = V2, 12–23 = V1. Topologi sekarang memakai V1 = 16 (28 VM, bagian 14).
+
+**Menambah tipe VM baru:** tambahkan konstanta baru. Urutan argumen: jumlah VM, PE, MIPS/PE, RAM MB, BW Mbps.
+
+```java
+V4_XLARGE(2, 8, 2_800, 16_384, 2_000),   // taruh paling atas agar mendapat indeks 0-1 dan host tercepat
+V3_LARGE(4, 4, 2_500, 8_192, 1_000),
+...
+```
+
+- `label()` mengambil **dua huruf pertama** nama enum ("V4"), jadi dua huruf awal harus unik antar tipe.
+- Pastikan VM baru muat di minimal satu tipe host (MIPS/PE ≤ MIPS/PE host, PE ≤ PE host).
+
+**Mengurangi VM:** perkecil `count`, atau hapus konstanta tipe VM-nya.
+
+### 9.7 Menyesuaikan Real-World (Docker)
+
+Real-world menyimpan **salinan manual** spesifikasi simulasi. Selalu jalankan simulasi lebih dulu agar `results/simulation/placement.csv` berisi penempatan yang baru, lalu sesuaikan file berikut:
+
+**1. `realworld/kpb_realworld.py`** (blok "Infrastruktur", sekitar baris 85–127)
+
+```python
+HOST_TYPES = {                       # samakan dengan enum HostType
+    "A": {"pes": 8, "mips": 3_000, "p_idle": 175, "p_max": 250},
+    "B": {"pes": 8, "mips": 1_800, "p_idle": 72, "p_max": 120},
+    "C": {"pes": 8, "mips": 2_400, "p_idle": 110, "p_max": 180},   # tipe host baru
+}
+DATACENTERS = {                      # key = ID DC di placement.csv (DC-1 = 1, DC-2 = 2, ...)
+    1: {"name": "DC-1 Performance", "host_type": "A", "hosts": 3, "cost_sec": 0.05, "cost_gb_ram": 0.02, "cost_bw": 0.005},
+    2: {"name": "DC-2 Efficiency", "host_type": "B", "hosts": 3, "cost_sec": 0.03, "cost_gb_ram": 0.01, "cost_bw": 0.003},
+    3: {"name": "DC-3 Balanced", "host_type": "C", "hosts": 2, "cost_sec": 0.04, "cost_gb_ram": 0.015, "cost_bw": 0.004},
+}
+# Sebelumnya range(3) untuk semua DC; ganti agar mengikuti jumlah host tiap DC.
+HOSTS = [(dc, h) for dc, spec in DATACENTERS.items() for h in range(spec["hosts"])]
+
+VM_TYPES = { ... }                   # samakan dengan enum VmType (pes, mips, ram_gb, bw)
+
+# Urutan dan jumlah harus sama persis dengan VmFactory (V3 dulu, lalu V2, lalu V1)
+for i, vm_type in enumerate(["V3"] * 4 + ["V2"] * 8 + ["V1"] * 12):
+```
+
+`PLACEMENT` cukup disalin dari hasil simulasi. Perintah ini mencetak list yang siap ditempel:
+
+```bash
+python3 -c "import csv; print([(int(r['datacenter']), int(r['host'])) for r in csv.DictReader(open('results/simulation/placement.csv'))])"
+```
+
+**2. `realworld/docker-compose.yml`**: satu service per VM. Tambahkan atau hapus blok `vmNN` dengan pola berikut:
+
+```yaml
+  vm20:
+    <<: *worker
+    container_name: kpb_vm20
+    cpu_quota: 1000    # = PE x MIPS VM (1.0 CPU = 10,000 MIPS, cpu_period 10,000 us)
+    mem_limit: 2g      # RAM VM
+    environment: { VM_NAME: vm20, VM_TYPE: V1, PORT: "8000" }
+    labels: { soka.dc: "DC-2", soka.host: "dc2-hostB1", soka.vm_type: V1 }   # dari placement.csv
+    networks: [dc2]
+    ports: ["127.0.0.1:9120:8000"]   # port = 9100 + nomor VM
+```
+
+- Karena `cpu_period` 10,000 µs dan 1.0 CPU = 10,000 MIPS, nilai `cpu_quota` **sama dengan kapasitas VM** (V3 = 10000, V2 = 3000, V1 = 1000).
+- DC baru membutuhkan jaringan baru di blok `networks:` (misalnya `dc3: { name: soka_dc3_balanced }`).
+- `VM_TYPE` wajib sama dengan tipe VM di runner. Kalau beda, runner berhenti di `check_workers()`.
+- Perhatikan CPU laptop/PC: total kuota = Σ kapasitas VM / 10,000 CPU (saat ini 72,000 / 10,000 = 7.2 CPU). Bila total ini melebihi jumlah core mesin, container saling berebut CPU dan rasio kecepatan antar VM tidak lagi sesuai kapasitasnya.
+
+**3. `realworld/analyze_grid.py`**: fungsi `tier()` memakai batas indeks VM yang ditulis langsung di kode (`vm < 4` → V3, `vm < 12` → V2). Sesuaikan dengan indeks baru.
+
+**4. Terapkan container:**
+
+```bash
+cd realworld
+docker compose up -d --remove-orphans   # --remove-orphans membuang container VM yang sudah dihapus
+docker ps --filter name=kpb_vm --format "{{.Names}}" | wc -l   # jumlahnya harus sama dengan jumlah VM
+```
+
+### 9.8 Checklist Verifikasi
+
+```bash
+mvn -q clean compile
+mvn -q exec:java -Dlog=error      # data contoh 5 task; cek blok "=== Infrastruktur CloudSim ==="
+cat results/simulation/placement.csv
+```
+
+Pastikan baris `Total: <x> datacenter, <y> host, <z> VM` dan `vmsCreated=z/z` sesuai harapan, dan setiap host tidak melebihi `PE terpakai 8/8`.
+
+| Pesan error | Penyebab | Perbaikan |
+|:---|:---|:---|
+| `No host can fit VM <id>` | Kapasitas host kurang, atau MIPS/PE VM > MIPS/PE semua host | Tambah host/DC, atau kurangi/kecilkan VM (9.2 aturan 3) |
+| `Only n of m VMs were created` | Alokasi VM gagal di CloudSim | Sama dengan di atas |
+| `Tipe host tidak dikenal: <x> MIPS/PE` | Host dibuat dengan MIPS/PE yang tidak ada di enum `HostType` | Tambahkan tipenya di `HostType` (9.4 b.1) |
+| DC baru tercetak "Efficiency" | Nama tipe baru belum ditambahkan di `printInfrastructure` | Langkah 9.4 b.4 |
+| `[ERROR] Kapasitas VM di mapping beda dengan VMS runner ini` | `VM_TYPES` / `VMS` di `kpb_realworld.py` tidak sama dengan `VmFactory` | Samakan jumlah, urutan, dan spesifikasi VM |
+| `[ERROR] Penempatan vmXX beda dengan CloudSim` | `PLACEMENT` belum diperbarui | Salin ulang dari `placement.csv` (9.7) |
+| `[ERROR] vmXX ... tidak merespons` | Container VM baru belum dibuat | `docker compose up -d` |
+
+Setelah semuanya lolos:
+1. Perbarui tabel dan diagram bagian 3 (3.1–3.5) serta angka total di bagian 11 (Status dan Batasan).
+2. Jalankan ulang grid simulasi (bagian 6.1) dan real-world (bagian 7.3), karena hasil lama berasal dari infrastruktur sebelumnya.
+
+---
+
+## 10. Struktur Direktori
 
 ```
 soka-a-5/
@@ -1199,7 +1428,7 @@ soka-a-5/
 
 ---
 
-## 10. Status dan Batasan
+## 11. Status dan Batasan
 
 | Tugas | Status |
 |:---|:---|
@@ -1230,7 +1459,7 @@ Asumsi yang tetap berlaku (Desain bagian 4.5): tanpa migrasi VM, tanpa kegagalan
 
 ---
 
-## 11. Kesimpulan KPB
+## 12. Kesimpulan KPB
 
 KPB adalah algoritma yang cepat dan sederhana, sehingga cocok digunakan sebagai *baseline penjadwalan task independen* pada sistem *heterogen*. 
 
@@ -1240,12 +1469,151 @@ Keunggulan khas KPB lebih relevan ketika jenis task beragam dan urutan VM terbai
 
 Jika energi dan biaya ingin dioptimalkan secara langsung, diperlukan algoritma atau fungsi objektif multi-objective. Pada eksperimen ini energi dan biaya terutama mengikuti makespan karena seluruh host dan VM tetap dihitung aktif selama eksekusi.
 
-## 12. Referensi
+## 13. Referensi
 
 1. Maheswaran M, Ali S, Siegel HJ, Hensgen D, Freund RF. Dynamic matching and scheduling of a class of independent tasks onto heterogeneous computing systems. *Proc. 8th Heterogeneous Computing Workshop (HCW '99)*. 1999:30–44.
 2. Braun TD, et al. A comparison of eleven static heuristics for mapping a class of independent tasks onto heterogeneous distributed computing systems. *Journal of Parallel and Distributed Computing*. 2001;61(6):810–837.
 3. Silva Filho MC, et al. CloudSim Plus: A modern Java 8 framework for modeling and simulation of cloud computing infrastructures. *IFIP/IEEE IM*. 2017.
 4. Hussain A, Aleem M. GoCJ: Google Cloud Jobs Dataset for Distributed and Cloud Computing Infrastructures. *Data*. 2018;3(4):38. Mendeley Data.
+
+---
+
+## 14. Hasil Perubahan
+
+Topologi simulasi diganti dari **2 datacenter × 3 host / 20 VM** (desain awal, bagian 3) menjadi **3 datacenter × 2 host / 28 VM**. Spesifikasi host Tipe A, host Tipe B, dan ketiga tipe VM tidak berubah. Yang ditambahkan adalah datacenter baru **DC-2 Balanced** (host Tipe C) dan 8 VM V1. Datacenter Efficiency bergeser dari DC-2 menjadi DC-3.
+
+Jumlah VM per host tidak dipatok. Setiap host diisi sampai PE-nya pas penuh (8/8 PE), mengikuti aturan penempatan C3–C6 yang sama (`ConstrainedPlacement`). Kode di `src/` sekarang memakai topologi ini. Bagian 3, 6, dan 7 tetap berisi desain dan hasil awal sebagai pembanding.
+
+### 14.1 Apa yang Berubah
+
+| Komponen | Desain awal | Topologi baru |
+|:---|:---:|:---:|
+| Datacenter | 2 (Performance, Efficiency) | **3** (Performance, **Balanced**, Efficiency) |
+| Host per datacenter | 3 | **2** |
+| Total host / PE host | 6 / 48 PE | 6 / 48 PE |
+| Total MIPS host | 115,200 | 115,200 |
+| Tipe host | A, B | A, B, **C (baru)** |
+| VM | 20 (4 V3 + 8 V2 + 8 V1) | **28** (4 V3 + 8 V2 + **16** V1) |
+| PE VM terpakai / PE host | 40 / 48 | **48 / 48** |
+| Kapasitas VM total | 72,000 MIPS | **80,000 MIPS** |
+| Total P idle / P maks semua host | 741 W / 1,110 W | 714 W / 1,100 W |
+| Kandidat KPB k = 20% / 50% / 100% | 4 / 10 / 20 VM | 6 / 14 / 28 VM |
+| Kapasitas subset k = 20% / 50% / 100% | 40,000 / 58,000 / 72,000 MIPS | 46,000 / 66,000 / 80,000 MIPS |
+
+Spesifikasi datacenter dan host baru:
+
+| Datacenter | Tipe host | PE × MIPS | RAM | Bandwidth | P idle | P maks | Cost/s | Cost RAM (GB) | Cost storage (GB) | Cost BW (Mbps) |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| DC-1 Performance | A | 8 × 3,000 | 32 GB | 10 Gbps | 175 W | 250 W | $0.05 | $0.02 | $0.001 | $0.005 |
+| **DC-2 Balanced (baru)** | **C** | **8 × 2,400** | 32 GB | **8 Gbps** | **110 W** | **180 W** | **$0.04** | **$0.015** | **$0.0009** | **$0.004** |
+| DC-3 Efficiency | B | 8 × 1,800 | 32 GB | 5 Gbps | 72 W | 120 W | $0.03 | $0.01 | $0.0008 | $0.003 |
+
+Tipe C sengaja diberi 2,400 MIPS/PE: di antara A dan B, tetapi masih di bawah 2,500 MIPS/PE milik V3. Akibatnya V3 tetap hanya muat di DC-1 (batasan C6). Urutan datacenter disusun dari tercepat ke paling hemat, karena `planHosts` mengisi datacenter secara berurutan (bagian 9.2).
+
+File yang diubah: [`DatacenterFactory.java`](src/main/java/project/setup/DatacenterFactory.java) (tipe C, 2 host per DC, 3 DC, `typeOf()` untuk semua tipe), [`VmFactory.java`](src/main/java/project/setup/VmFactory.java) (V1 8 → 16), [`Experiment.java`](src/main/java/project/Experiment.java) (nama "Balanced" di log), [`plot_grid.py`](scripts/plot_grid.py) (kapasitas subset k%), dan komentar di kode yang menyebut 20 VM / 2 DC.
+
+### 14.2 Diagram Penempatan
+
+Hasil CloudSim yang sebenarnya (`placement.csv` di sesi `results/sessions/cloudsim_gocj_3dc_20261016_190549/`):
+
+```mermaid
+flowchart TD
+    T["Cloudlet GoCJ 50–1,000 task<br/>300 KB in/out · tiba t = 0"]
+    K["KPB Scheduler<br/>subset k% dari 28 VM → min CT"]
+    Broker["DatacenterBrokerSimple<br/>bindCloudletToVm(mapping)"]
+    T --> K --> Broker
+
+    subgraph DC1["DC-1 Performance · Tipe A · $0.05/s"]
+        A0["Host A0 · 8 PE × 3,000<br/>vm00 V3 · vm02 V3<br/>8/8 PE"]
+        A1["Host A1 · 8 PE × 3,000<br/>vm01 V3 · vm03 V3<br/>8/8 PE"]
+    end
+
+    subgraph DC2["DC-2 Balanced (baru) · Tipe C · $0.04/s"]
+        C0["Host C0 · 8 PE × 2,400<br/>vm04 · vm06 · vm08 · vm10 (V2)<br/>8/8 PE"]
+        C1["Host C1 · 8 PE × 2,400<br/>vm05 · vm07 · vm09 · vm11 (V2)<br/>8/8 PE"]
+    end
+
+    subgraph DC3["DC-3 Efficiency · Tipe B · $0.03/s"]
+        B0["Host B0 · 8 PE × 1,800<br/>vm12 · vm14 · vm16 · vm18<br/>vm20 · vm22 · vm24 · vm26 (V1)<br/>8/8 PE"]
+        B1["Host B1 · 8 PE × 1,800<br/>vm13 · vm15 · vm17 · vm19<br/>vm21 · vm23 · vm25 · vm27 (V1)<br/>8/8 PE"]
+    end
+
+    Broker --> DC1
+    Broker --> DC2
+    Broker --> DC3
+```
+
+### 14.3 Tabel Penempatan VM per Host
+
+| DC | Host | Tipe host | VM yang ditempatkan | Jumlah VM | PE terpakai | MIPS VM / MIPS host | RAM VM / RAM host | BW VM / BW host |
+|:---:|:---:|:---:|:---|:---:|:---:|:---:|:---:|:---:|
+| DC-1 Performance | A0 | A | vm00 V3, vm02 V3 | 2 | 8 / 8 | 20,000 / 24,000 | 16 / 32 GB | 2,000 / 10,000 Mbps |
+| DC-1 Performance | A1 | A | vm01 V3, vm03 V3 | 2 | 8 / 8 | 20,000 / 24,000 | 16 / 32 GB | 2,000 / 10,000 Mbps |
+| DC-2 Balanced | C0 | C | vm04, vm06, vm08, vm10 (V2) | 4 | 8 / 8 | 12,000 / 19,200 | 16 / 32 GB | 4,000 / 8,000 Mbps |
+| DC-2 Balanced | C1 | C | vm05, vm07, vm09, vm11 (V2) | 4 | 8 / 8 | 12,000 / 19,200 | 16 / 32 GB | 4,000 / 8,000 Mbps |
+| DC-3 Efficiency | B0 | B | vm12, vm14, vm16, vm18, vm20, vm22, vm24, vm26 (V1) | 8 | 8 / 8 | 8,000 / 14,400 | 16 / 32 GB | 4,000 / 5,000 Mbps |
+| DC-3 Efficiency | B1 | B | vm13, vm15, vm17, vm19, vm21, vm23, vm25, vm27 (V1) | 8 | 8 / 8 | 8,000 / 14,400 | 16 / 32 GB | 4,000 / 5,000 Mbps |
+| **Total** | **6** | — | — | **28** | **48 / 48** | **80,000 / 115,200** | **96 / 192 GB** | — |
+
+### 14.4 Pembagian per Datacenter
+
+| Datacenter | Host | VM | Jumlah VM | PE VM / PE host | MIPS VM / MIPS host | Porsi kapasitas VM |
+|:---|:---|:---|:---:|:---:|:---:|:---:|
+| DC-1 Performance | A0, A1 | V3 Large: vm00–vm03 | 4 | 16 / 16 (100%) | 40,000 / 48,000 | 50% |
+| DC-2 Balanced | C0, C1 | V2 Medium: vm04–vm11 | 8 | 16 / 16 (100%) | 24,000 / 38,400 | 30% |
+| DC-3 Efficiency | B0, B1 | V1 Small: vm12–vm27 | 16 | 16 / 16 (100%) | 16,000 / 28,800 | 20% |
+| **Total** | **6 host** | **V3 × 4, V2 × 8, V1 × 16** | **28** | **48 / 48** | **80,000 / 115,200** | **100%** |
+
+Setiap datacenter berisi tepat satu kelas VM. VM ditempatkan berurutan dari yang terbesar (V3, lalu V2, lalu V1), dan datacenter diisi berurutan (DC-1, lalu DC-2, lalu DC-3). Keempat V3 menghabiskan 16 PE DC-1, sehingga V2 tidak lagi muat di DC-1 dan pindah ke DC-2. Kedelapan V2 lalu menghabiskan 16 PE DC-2, sehingga semua V1 berakhir di DC-3. Jumlah VM per host jadi berbeda (2, 4, dan 8), tetapi PE setiap host terpakai penuh.
+
+### 14.5 Hasil Simulasi GoCJ (CloudSim)
+
+Grid GoCJ 50–1,000 task × k = 20/50/100% (33 run) dijalankan dengan topologi baru. Rasio makespan CloudSim/analitik 1.005–1.016. Perbandingan dengan desain awal (`results/sessions/cloudsim_gocj_20261009_225810/`) pada tiga skenario S1–S3:
+
+| Task | k | Makespan awal (s) | Makespan baru (s) | Δ | Energi awal (kWh) | Energi baru (kWh) | Δ | Biaya awal (USD) | Biaya baru (USD) | Δ | VM terpakai |
+|---:|:---:|---:|---:|:---:|---:|---:|:---:|---:|---:|:---:|:---:|
+| 100 | 20% | 367.80 | 322.46 | −12.3% | 0.0875 | 0.0760 | −13.2% | 506.77 | 507.53 | +0.1% | 4 → 6 |
+| 100 | 50% | 273.35 | 246.97 | −9.6% | 0.0681 | 0.0614 | −9.9% | 393.43 | 406.88 | +3.4% | 10 → 14 |
+| 100 | 100% | 233.08 | **222.83** | −4.4% | 0.0599 | **0.0566** | −5.6% | 345.11 | 374.69 | +8.6% | 20 → 28 |
+| 500 | 20% | 1,655.38 | 1,436.82 | −13.2% | 0.3976 | 0.3429 | −13.7% | 2,051.87 | 1,993.35 | −2.9% | 4 → 6 |
+| 500 | 50% | 1,146.19 | 1,007.58 | −12.1% | 0.2930 | 0.2600 | −11.3% | 1,440.84 | 1,421.03 | −1.4% | 10 → 14 |
+| 500 | 100% | 933.07 | **860.69** | −7.8% | 0.2497 | **0.2308** | −7.6% | 1,185.10 | 1,225.17 | +3.4% | 20 → 28 |
+| 1,000 | 20% | 3,331.27 | 2,909.32 | −12.7% | 0.7990 | 0.6927 | −13.3% | 4,062.94 | 3,956.68 | −2.6% | 4 → 6 |
+| 1,000 | 50% | 2,313.56 | 2,033.71 | −12.1% | 0.5900 | 0.5233 | −11.3% | 2,841.69 | 2,789.20 | −1.8% | 10 → 14 |
+| 1,000 | 100% | 1,880.16 | **1,706.07** | −9.3% | 0.5020 | **0.4582** | −8.7% | 2,321.60 | 2,352.35 | +1.3% | 20 → 28 |
+
+Tabel lengkap 8 metrik untuk 50–1,000 task ada di [`docs/figures/topologi_3dc/gocj_tables.md`](docs/figures/topologi_3dc/gocj_tables.md).
+
+![Makespan topologi 3 DC](docs/figures/topologi_3dc/makespan.png)
+
+*Makespan topologi baru terhadap jumlah task GoCJ. Urutan k sama dengan desain awal: k = 100% selalu terendah.*
+
+![Energi topologi 3 DC](docs/figures/topologi_3dc/energi.png)
+
+*Energi total 6 host selama makespan (kWh) pada topologi baru.*
+
+### 14.6 Analisis
+
+- **Makespan turun di semua skenario.** Rata-rata penurunan pada 11 ukuran task: 12.1% (k = 20%), 10.5% (k = 50%), dan 7.3% (k = 100%). Penyebabnya kapasitas subset kandidat KPB naik: k = 20% kini memuat 4 V3 + 2 V2 (46,000 MIPS, sebelumnya 40,000), k = 50% memuat 14 VM (66,000 MIPS, sebelumnya 58,000), dan k = 100% memuat 28 VM (80,000 MIPS, sebelumnya 72,000). Sesuai rumus bagian 6.6 (makespan ≈ Σ L / kapasitas subset), batas teorinya −13.0%, −12.1%, dan −10.0%. Pada 500–1,000 task hasilnya mendekati batas itu. Pada task sedikit, penurunannya lebih kecil karena makespan dibatasi task terbesar yang tetap harus dikerjakan satu V3.
+- **Energi turun di semua skenario**, rata-rata 12.9% (k = 20%), 10.2% (k = 50%), dan 7.4% (k = 100%), dengan rentang 2.7–13.7%. Ada dua penyebab: makespan lebih pendek, dan total daya idle 6 host turun dari 741 W ke 714 W. Satu host Tipe A (175 W) dan satu host Tipe B (72 W) diganti dua host Tipe C (110 W).
+- **Biaya bergantung pada k dan jumlah task.** Ke-28 VM ditagih selama seluruh simulasi, termasuk VM yang idle (`setVmDestructionDelay` di `SimulationSetup`), jadi 8 VM tambahan menambah biaya RAM, BW, dan pemrosesan. Pada k = 20% dan 50% mulai 400 task, tambahan itu tertutup oleh makespan yang lebih pendek, sehingga biaya turun 0.1–2.9%. Pada task sedikit, dan pada k = 100% di semua ukuran, penurunan makespan tidak cukup menutupinya, sehingga biaya naik (k = 100%: +1.2% di 800 task s.d. +12.8% di 50 task).
+- **Kesimpulan KPB tidak berubah.** Pada heterogenitas konsisten, k = 100% (setara MCT) tetap memberi makespan dan energi terendah. Kandidat yang lebih banyak berarti kapasitas yang dipakai lebih besar.
+
+### 14.7 Cara Mengulang
+
+```bash
+mvn -q clean compile
+mvn -q exec:java -Dlog=error            # cek blok "=== Infrastruktur CloudSim ===": 3 datacenter, 6 host, 28 VM
+
+SESSION=results/sessions/cloudsim_gocj_3dc_<timestamp> SOURCE=gocj bash scripts/run_grid_cloudsim.sh
+python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_3dc_<timestamp> --out docs/figures/topologi_3dc
+```
+
+### 14.8 Yang Belum Disesuaikan
+
+- **Real-world (bagian 7)** masih memakai 20 container dan 2 datacenter. `kpb_realworld.py` akan berhenti dengan `[ERROR] Kapasitas VM di mapping beda dengan VMS runner ini` sampai `docker-compose.yml`, `kpb_realworld.py`, dan `analyze_grid.py` disesuaikan dengan langkah bagian 9.7. Total kuota CPU topologi baru 80,000 / 10,000 = 8.0 CPU.
+- **Grid Synthetic 1,000–10,000 task (bagian 6.3)** belum dijalankan ulang dengan topologi baru.
+- **Bagian 3, 6, dan 7** masih berisi angka desain awal.
 
 ---
 
