@@ -153,7 +153,7 @@ Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menent
 
 ## 3. Arsitektur Datacenter
 
-> **Catatan:** bagian ini mendokumentasikan desain awal (2 datacenter × 3 host, 20 VM). Kode sekarang memakai topologi 3 datacenter × 2 host, 28 VM. Lihat [bagian 14. Hasil Perubahan](#14-hasil-perubahan).
+> **Catatan:** bagian ini mendokumentasikan desain awal (2 datacenter × 3 host, 20 VM). Kode sekarang memakai topologi 3 datacenter × 2 host, 48 VM. Lihat [bagian 14. Hasil Perubahan](#14-hasil-perubahan).
 
 Arsitektur terdiri atas dua datacenter dengan karakter berbeda: satu berorientasi kinerja dan satu berorientasi efisiensi energi.
 
@@ -1161,7 +1161,7 @@ Di simulasi, infrastruktur hanya didefinisikan di dua file: [`DatacenterFactory.
 1. **Urutan datacenter = prioritas penempatan.** `ConstrainedPlacement.planHosts` menaruh setiap VM di datacenter **pertama** yang masih punya host cocok. Datacenter berikutnya baru dipakai setelah datacenter sebelumnya penuh. Akibatnya, DC baru yang ditaruh di akhir list bisa tidak mendapat VM sama sekali, tetapi host-nya tetap dihitung energi idle-nya (`EnergyMeter` menjumlahkan **semua** host dari 0 sampai makespan). Hasilnya energi naik, makespan tidak berubah.
 2. **Urutan VM = urutan deklarasi `VmType`.** ID VM sama dengan indeks list (0, 1, 2, …), dan `mapping[i]` hasil KPB menunjuk indeks ini. VM terbesar dideklarasikan lebih dulu agar mendapat host tercepat.
 3. **Semua VM harus muat** (batasan C3–C6, bagian 3.6). Bila tidak muat, simulasi berhenti dengan `IllegalStateException: No host can fit VM <id>`. Cek kasar sebelum menjalankan:
-   - Σ PE semua VM ≤ Σ PE semua host (saat ini 48 ≤ 48, semua host sudah penuh, jadi menambah VM wajib disertai menambah host),
+   - Σ PE semua VM ≤ Σ PE semua host (saat ini 88 ≤ 88, semua host sudah penuh, jadi menambah VM wajib disertai menambah host atau PE host),
    - Σ RAM dan Σ BW VM muat di host,
    - VM dengan MIPS/PE tinggi butuh host dengan MIPS/PE ≥ miliknya (V3 2,500 MIPS/PE hanya muat di host Tipe A 3,000, **tidak** di Tipe B 1,800).
 4. **Tipe host dikenali dari MIPS per PE** (`DatacenterFactory.typeOf`). Setiap tipe host wajib punya MIPS/PE yang berbeda. `typeOf` sudah memeriksa semua konstanta `HostType` (A, B, C) dan melempar `IllegalArgumentException` bila MIPS/PE tidak dikenal (bagian 9.4).
@@ -1263,7 +1263,7 @@ V2_MEDIUM(8, 2, 1_500, 4_096, 1_000),
 V1_SMALL(12, 1, 1_000, 2_048, 500);   // 8 -> 12: total jadi 24 VM
 ```
 
-Contoh uji di atas (pada desain awal) menghasilkan 24/24 VM dibuat, dan VM 20–23 (V1 tambahan) ditempatkan di DC-2 karena DC-1 sudah penuh. Indeks VM bergeser sesuai urutan tipe: VM 0–3 = V3, 4–11 = V2, 12–23 = V1. Topologi sekarang memakai V1 = 16 (28 VM, bagian 14).
+Contoh uji di atas (pada desain awal) menghasilkan 24/24 VM dibuat, dan VM 20–23 (V1 tambahan) ditempatkan di DC-2 karena DC-1 sudah penuh. Indeks VM bergeser sesuai urutan tipe: VM 0–3 = V3, 4–11 = V2, 12–23 = V1. Topologi sekarang memakai 8 V3 + 16 V2 + 24 V1 (48 VM, bagian 14).
 
 **Menambah tipe VM baru:** tambahkan konstanta baru. Urutan argumen: jumlah VM, PE, MIPS/PE, RAM MB, BW Mbps.
 
@@ -1480,9 +1480,12 @@ Jika energi dan biaya ingin dioptimalkan secara langsung, diperlukan algoritma a
 
 ## 14. Hasil Perubahan
 
-Topologi simulasi diganti dari **2 datacenter × 3 host / 20 VM** (desain awal, bagian 3) menjadi **3 datacenter × 2 host / 28 VM**. Spesifikasi host Tipe A, host Tipe B, dan ketiga tipe VM tidak berubah. Yang ditambahkan adalah datacenter baru **DC-2 Balanced** (host Tipe C) dan 8 VM V1. Datacenter Efficiency bergeser dari DC-2 menjadi DC-3.
+Topologi simulasi diganti dari **2 datacenter × 3 host / 20 VM** (desain awal, bagian 3) menjadi **3 datacenter × 2 host / 48 VM**. Ke-48 VM dibagi rata ke 6 host, **8 VM per host**. Supaya muat, PE host dinaikkan:
+- host Tipe A: 8 → **24 PE**, RAM 32 → 64 GB;
+- host Tipe C (baru, di DC-2 Balanced): **12 PE**;
+- host Tipe B: tetap 8 PE.
 
-Jumlah VM per host tidak dipatok. Setiap host diisi sampai PE-nya pas penuh (8/8 PE), mengikuti aturan penempatan C3–C6 yang sama (`ConstrainedPlacement`). Kode di `src/` sekarang memakai topologi ini. Bagian 3, 6, dan 7 tetap berisi desain dan hasil awal sebagai pembanding.
+Spesifikasi ketiga tipe VM (V3, V2, V1) dan daya host tidak berubah (lihat catatan energi di 14.6). Kode di `src/` sekarang memakai topologi ini. Bagian 3, 6, dan 7 tetap berisi desain dan hasil awal sebagai pembanding.
 
 ### 14.1 Apa yang Berubah
 
@@ -1490,52 +1493,65 @@ Jumlah VM per host tidak dipatok. Setiap host diisi sampai PE-nya pas penuh (8/8
 |:---|:---:|:---:|
 | Datacenter | 2 (Performance, Efficiency) | **3** (Performance, **Balanced**, Efficiency) |
 | Host per datacenter | 3 | **2** |
-| Total host / PE host | 6 / 48 PE | 6 / 48 PE |
-| Total MIPS host | 115,200 | 115,200 |
-| Tipe host | A, B | A, B, **C (baru)** |
-| VM | 20 (4 V3 + 8 V2 + 8 V1) | **28** (4 V3 + 8 V2 + **16** V1) |
-| PE VM terpakai / PE host | 40 / 48 | **48 / 48** |
-| Kapasitas VM total | 72,000 MIPS | **80,000 MIPS** |
+| Total host | 6 | 6 |
+| PE per host (A / C / B) | 8 / – / 8 | **24 / 12 / 8** |
+| Total PE host | 48 | **88** |
+| Total MIPS host | 115,200 | **230,400** |
+| Total RAM host | 192 GB | **256 GB** |
+| VM | 20 (4 V3 + 8 V2 + 8 V1) | **48** (8 V3 + 16 V2 + 24 V1) |
+| VM per host | 2–4 | **8 (semua host)** |
+| PE VM terpakai / PE host | 40 / 48 | **88 / 88** |
+| Kapasitas VM total | 72,000 MIPS | **152,000 MIPS** |
 | Total P idle / P maks semua host | 741 W / 1,110 W | 714 W / 1,100 W |
-| Kandidat KPB k = 20% / 50% / 100% | 4 / 10 / 20 VM | 6 / 14 / 28 VM |
-| Kapasitas subset k = 20% / 50% / 100% | 40,000 / 58,000 / 72,000 MIPS | 46,000 / 66,000 / 80,000 MIPS |
+| Kandidat KPB k = 20% / 50% / 100% | 4 / 10 / 20 VM | 10 / 24 / 48 VM |
+| Kapasitas subset k = 20% / 50% / 100% | 40,000 / 58,000 / 72,000 MIPS | 86,000 / 128,000 / 152,000 MIPS |
 
-Spesifikasi datacenter dan host baru:
+Spesifikasi datacenter dan host:
 
-| Datacenter | Tipe host | PE × MIPS | RAM | Bandwidth | P idle | P maks | Cost/s | Cost RAM (GB) | Cost storage (GB) | Cost BW (Mbps) |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| DC-1 Performance | A | 8 × 3,000 | 32 GB | 10 Gbps | 175 W | 250 W | $0.05 | $0.02 | $0.001 | $0.005 |
-| **DC-2 Balanced (baru)** | **C** | **8 × 2,400** | 32 GB | **8 Gbps** | **110 W** | **180 W** | **$0.04** | **$0.015** | **$0.0009** | **$0.004** |
-| DC-3 Efficiency | B | 8 × 1,800 | 32 GB | 5 Gbps | 72 W | 120 W | $0.03 | $0.01 | $0.0008 | $0.003 |
+| Datacenter | Tipe host | PE × MIPS | Total MIPS | RAM | Bandwidth | P idle | P maks | Cost/s | Cost RAM (GB) | Cost storage (GB) | Cost BW (Mbps) |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| DC-1 Performance | A | **24** × 3,000 | 72,000 | **64 GB** | 10 Gbps | 175 W | 250 W | $0.05 | $0.02 | $0.001 | $0.005 |
+| **DC-2 Balanced (baru)** | **C** | **12 × 2,400** | **28,800** | 32 GB | **8 Gbps** | **110 W** | **180 W** | **$0.04** | **$0.015** | **$0.0009** | **$0.004** |
+| DC-3 Efficiency | B | 8 × 1,800 | 14,400 | 32 GB | 5 Gbps | 72 W | 120 W | $0.03 | $0.01 | $0.0008 | $0.003 |
 
-Tipe C sengaja diberi 2,400 MIPS/PE: di antara A dan B, tetapi masih di bawah 2,500 MIPS/PE milik V3. Akibatnya V3 tetap hanya muat di DC-1 (batasan C6). Urutan datacenter disusun dari tercepat ke paling hemat, karena `planHosts` mengisi datacenter secara berurutan (bagian 9.2).
+**Kenapa PE-nya 24 / 12 / 8.** Dengan host 8 PE, 8 VM per host tidak mungkin bila ada V3: V3 + 7 VM lain butuh minimal 4 + 7 = 11 PE. `ConstrainedPlacement` menempatkan VM dari yang terbesar (V3, V2, lalu V1) dan mengisi datacenter berurutan, jadi isi tiap host dihitung dari urutan itu:
+- host DC-1: 4 V3 + 4 V2 = 16 + 8 = **24 PE**, RAM 32 + 16 = 48 GB (karena itu RAM dinaikkan ke 64 GB);
+- host DC-2: 4 V2 + 4 V1 = 8 + 4 = **12 PE**;
+- host DC-3: 8 V1 = **8 PE** (sama dengan Tipe B awal).
 
-File yang diubah: [`DatacenterFactory.java`](src/main/java/project/setup/DatacenterFactory.java) (tipe C, 2 host per DC, 3 DC, `typeOf()` untuk semua tipe), [`VmFactory.java`](src/main/java/project/setup/VmFactory.java) (V1 8 → 16), [`Experiment.java`](src/main/java/project/Experiment.java) (nama "Balanced" di log), [`plot_grid.py`](scripts/plot_grid.py) (kapasitas subset k%), dan komentar di kode yang menyebut 20 VM / 2 DC.
+Tipe C diberi 2,400 MIPS/PE, di bawah 2,500 MIPS/PE milik V3, sehingga V3 tetap hanya muat di DC-1 (batasan C6).
+
+File yang diubah:
+- [`DatacenterFactory.java`](src/main/java/project/setup/DatacenterFactory.java): PE/RAM Tipe A, Tipe C baru, 2 host per DC, 3 DC, `typeOf()` untuk semua tipe;
+- [`VmFactory.java`](src/main/java/project/setup/VmFactory.java): 8 / 16 / 24 VM;
+- [`Experiment.java`](src/main/java/project/Experiment.java): nama "Balanced" di log;
+- [`plot_grid.py`](scripts/plot_grid.py): kapasitas subset k%;
+- komentar di kode yang menyebut jumlah VM atau DC.
 
 ### 14.2 Diagram Penempatan
 
-Hasil CloudSim yang sebenarnya (`placement.csv` di sesi `results/sessions/cloudsim_gocj_3dc_20261016_190549/`):
+Hasil CloudSim yang sebenarnya (`placement.csv` di sesi `results/sessions/cloudsim_gocj_48vm_20261016_192245/`):
 
 ```mermaid
 flowchart TD
     T["Cloudlet GoCJ 50–1,000 task<br/>300 KB in/out · tiba t = 0"]
-    K["KPB Scheduler<br/>subset k% dari 28 VM → min CT"]
+    K["KPB Scheduler<br/>subset k% dari 48 VM → min CT"]
     Broker["DatacenterBrokerSimple<br/>bindCloudletToVm(mapping)"]
     T --> K --> Broker
 
     subgraph DC1["DC-1 Performance · Tipe A · $0.05/s"]
-        A0["Host A0 · 8 PE × 3,000<br/>vm00 V3 · vm02 V3<br/>8/8 PE"]
-        A1["Host A1 · 8 PE × 3,000<br/>vm01 V3 · vm03 V3<br/>8/8 PE"]
+        A0["Host A0 · 24 PE × 3,000 · 64 GB<br/>V3: vm00 · vm02 · vm04 · vm06<br/>V2: vm08 · vm10 · vm12 · vm14<br/>8 VM · 24/24 PE"]
+        A1["Host A1 · 24 PE × 3,000 · 64 GB<br/>V3: vm01 · vm03 · vm05 · vm07<br/>V2: vm09 · vm11 · vm13 · vm15<br/>8 VM · 24/24 PE"]
     end
 
     subgraph DC2["DC-2 Balanced (baru) · Tipe C · $0.04/s"]
-        C0["Host C0 · 8 PE × 2,400<br/>vm04 · vm06 · vm08 · vm10 (V2)<br/>8/8 PE"]
-        C1["Host C1 · 8 PE × 2,400<br/>vm05 · vm07 · vm09 · vm11 (V2)<br/>8/8 PE"]
+        C0["Host C0 · 12 PE × 2,400 · 32 GB<br/>V2: vm16 · vm18 · vm20 · vm22<br/>V1: vm24 · vm26 · vm28 · vm30<br/>8 VM · 12/12 PE"]
+        C1["Host C1 · 12 PE × 2,400 · 32 GB<br/>V2: vm17 · vm19 · vm21 · vm23<br/>V1: vm25 · vm27 · vm29 · vm31<br/>8 VM · 12/12 PE"]
     end
 
     subgraph DC3["DC-3 Efficiency · Tipe B · $0.03/s"]
-        B0["Host B0 · 8 PE × 1,800<br/>vm12 · vm14 · vm16 · vm18<br/>vm20 · vm22 · vm24 · vm26 (V1)<br/>8/8 PE"]
-        B1["Host B1 · 8 PE × 1,800<br/>vm13 · vm15 · vm17 · vm19<br/>vm21 · vm23 · vm25 · vm27 (V1)<br/>8/8 PE"]
+        B0["Host B0 · 8 PE × 1,800 · 32 GB<br/>V1: vm32 · vm34 · vm36 · vm38<br/>vm40 · vm42 · vm44 · vm46<br/>8 VM · 8/8 PE"]
+        B1["Host B1 · 8 PE × 1,800 · 32 GB<br/>V1: vm33 · vm35 · vm37 · vm39<br/>vm41 · vm43 · vm45 · vm47<br/>8 VM · 8/8 PE"]
     end
 
     Broker --> DC1
@@ -1547,71 +1563,80 @@ flowchart TD
 
 | DC | Host | Tipe host | VM yang ditempatkan | Jumlah VM | PE terpakai | MIPS VM / MIPS host | RAM VM / RAM host | BW VM / BW host |
 |:---:|:---:|:---:|:---|:---:|:---:|:---:|:---:|:---:|
-| DC-1 Performance | A0 | A | vm00 V3, vm02 V3 | 2 | 8 / 8 | 20,000 / 24,000 | 16 / 32 GB | 2,000 / 10,000 Mbps |
-| DC-1 Performance | A1 | A | vm01 V3, vm03 V3 | 2 | 8 / 8 | 20,000 / 24,000 | 16 / 32 GB | 2,000 / 10,000 Mbps |
-| DC-2 Balanced | C0 | C | vm04, vm06, vm08, vm10 (V2) | 4 | 8 / 8 | 12,000 / 19,200 | 16 / 32 GB | 4,000 / 8,000 Mbps |
-| DC-2 Balanced | C1 | C | vm05, vm07, vm09, vm11 (V2) | 4 | 8 / 8 | 12,000 / 19,200 | 16 / 32 GB | 4,000 / 8,000 Mbps |
-| DC-3 Efficiency | B0 | B | vm12, vm14, vm16, vm18, vm20, vm22, vm24, vm26 (V1) | 8 | 8 / 8 | 8,000 / 14,400 | 16 / 32 GB | 4,000 / 5,000 Mbps |
-| DC-3 Efficiency | B1 | B | vm13, vm15, vm17, vm19, vm21, vm23, vm25, vm27 (V1) | 8 | 8 / 8 | 8,000 / 14,400 | 16 / 32 GB | 4,000 / 5,000 Mbps |
-| **Total** | **6** | — | — | **28** | **48 / 48** | **80,000 / 115,200** | **96 / 192 GB** | — |
+| DC-1 Performance | A0 | A | V3: vm00, vm02, vm04, vm06<br/>V2: vm08, vm10, vm12, vm14 | 8 | 24 / 24 | 52,000 / 72,000 | 48 / 64 GB | 8,000 / 10,000 Mbps |
+| DC-1 Performance | A1 | A | V3: vm01, vm03, vm05, vm07<br/>V2: vm09, vm11, vm13, vm15 | 8 | 24 / 24 | 52,000 / 72,000 | 48 / 64 GB | 8,000 / 10,000 Mbps |
+| DC-2 Balanced | C0 | C | V2: vm16, vm18, vm20, vm22<br/>V1: vm24, vm26, vm28, vm30 | 8 | 12 / 12 | 16,000 / 28,800 | 24 / 32 GB | 6,000 / 8,000 Mbps |
+| DC-2 Balanced | C1 | C | V2: vm17, vm19, vm21, vm23<br/>V1: vm25, vm27, vm29, vm31 | 8 | 12 / 12 | 16,000 / 28,800 | 24 / 32 GB | 6,000 / 8,000 Mbps |
+| DC-3 Efficiency | B0 | B | V1: vm32, vm34, vm36, vm38, vm40, vm42, vm44, vm46 | 8 | 8 / 8 | 8,000 / 14,400 | 16 / 32 GB | 4,000 / 5,000 Mbps |
+| DC-3 Efficiency | B1 | B | V1: vm33, vm35, vm37, vm39, vm41, vm43, vm45, vm47 | 8 | 8 / 8 | 8,000 / 14,400 | 16 / 32 GB | 4,000 / 5,000 Mbps |
+| **Total** | **6** | — | — | **48** | **88 / 88** | **152,000 / 230,400** | **176 / 256 GB** | — |
 
 ### 14.4 Pembagian per Datacenter
 
 | Datacenter | Host | VM | Jumlah VM | PE VM / PE host | MIPS VM / MIPS host | Porsi kapasitas VM |
 |:---|:---|:---|:---:|:---:|:---:|:---:|
-| DC-1 Performance | A0, A1 | V3 Large: vm00–vm03 | 4 | 16 / 16 (100%) | 40,000 / 48,000 | 50% |
-| DC-2 Balanced | C0, C1 | V2 Medium: vm04–vm11 | 8 | 16 / 16 (100%) | 24,000 / 38,400 | 30% |
-| DC-3 Efficiency | B0, B1 | V1 Small: vm12–vm27 | 16 | 16 / 16 (100%) | 16,000 / 28,800 | 20% |
-| **Total** | **6 host** | **V3 × 4, V2 × 8, V1 × 16** | **28** | **48 / 48** | **80,000 / 115,200** | **100%** |
+| DC-1 Performance | A0, A1 | V3 Large: vm00–vm07<br/>V2 Medium: vm08–vm15 | 16 (8 V3 + 8 V2) | 48 / 48 (100%) | 104,000 / 144,000 | 68.4% |
+| DC-2 Balanced | C0, C1 | V2 Medium: vm16–vm23<br/>V1 Small: vm24–vm31 | 16 (8 V2 + 8 V1) | 24 / 24 (100%) | 32,000 / 57,600 | 21.1% |
+| DC-3 Efficiency | B0, B1 | V1 Small: vm32–vm47 | 16 (16 V1) | 16 / 16 (100%) | 16,000 / 28,800 | 10.5% |
+| **Total** | **6 host** | **V3 × 8, V2 × 16, V1 × 24** | **48** | **88 / 88** | **152,000 / 230,400** | **100%** |
 
-Setiap datacenter berisi tepat satu kelas VM. VM ditempatkan berurutan dari yang terbesar (V3, lalu V2, lalu V1), dan datacenter diisi berurutan (DC-1, lalu DC-2, lalu DC-3). Keempat V3 menghabiskan 16 PE DC-1, sehingga V2 tidak lagi muat di DC-1 dan pindah ke DC-2. Kedelapan V2 lalu menghabiskan 16 PE DC-2, sehingga semua V1 berakhir di DC-3. Jumlah VM per host jadi berbeda (2, 4, dan 8), tetapi PE setiap host terpakai penuh.
+Setiap datacenter dan setiap host menampung jumlah VM yang sama (16 per DC, 8 per host), dan semua PE terpakai penuh. Kelas VM bergeser bertingkat: DC-1 berisi VM terbesar (V3 + V2), DC-2 VM menengah (V2 + V1), DC-3 VM terkecil (V1). Sekitar dua pertiga kapasitas VM (68.4%) tetap berada di DC-1, karena seluruh V3 hanya muat di host Tipe A.
 
 ### 14.5 Hasil Simulasi GoCJ (CloudSim)
 
-Grid GoCJ 50–1,000 task × k = 20/50/100% (33 run) dijalankan dengan topologi baru. Rasio makespan CloudSim/analitik 1.005–1.016. Perbandingan dengan desain awal (`results/sessions/cloudsim_gocj_20261009_225810/`) pada tiga skenario S1–S3:
+Grid GoCJ 50–1,000 task × k = 20/50/100% (33 run) dijalankan dengan topologi baru. Rasio makespan CloudSim/analitik 1.003–1.016. Perbandingan dengan desain awal (`results/sessions/cloudsim_gocj_20261009_225810/`) pada tiga skenario S1–S3:
 
 | Task | k | Makespan awal (s) | Makespan baru (s) | Δ | Energi awal (kWh) | Energi baru (kWh) | Δ | Biaya awal (USD) | Biaya baru (USD) | Δ | VM terpakai |
 |---:|:---:|---:|---:|:---:|---:|---:|:---:|---:|---:|:---:|:---:|
-| 100 | 20% | 367.80 | 322.46 | −12.3% | 0.0875 | 0.0760 | −13.2% | 506.77 | 507.53 | +0.1% | 4 → 6 |
-| 100 | 50% | 273.35 | 246.97 | −9.6% | 0.0681 | 0.0614 | −9.9% | 393.43 | 406.88 | +3.4% | 10 → 14 |
-| 100 | 100% | 233.08 | **222.83** | −4.4% | 0.0599 | **0.0566** | −5.6% | 345.11 | 374.69 | +8.6% | 20 → 28 |
-| 500 | 20% | 1,655.38 | 1,436.82 | −13.2% | 0.3976 | 0.3429 | −13.7% | 2,051.87 | 1,993.35 | −2.9% | 4 → 6 |
-| 500 | 50% | 1,146.19 | 1,007.58 | −12.1% | 0.2930 | 0.2600 | −11.3% | 1,440.84 | 1,421.03 | −1.4% | 10 → 14 |
-| 500 | 100% | 933.07 | **860.69** | −7.8% | 0.2497 | **0.2308** | −7.6% | 1,185.10 | 1,225.17 | +3.4% | 20 → 28 |
-| 1,000 | 20% | 3,331.27 | 2,909.32 | −12.7% | 0.7990 | 0.6927 | −13.3% | 4,062.94 | 3,956.68 | −2.6% | 4 → 6 |
-| 1,000 | 50% | 2,313.56 | 2,033.71 | −12.1% | 0.5900 | 0.5233 | −11.3% | 2,841.69 | 2,789.20 | −1.8% | 10 → 14 |
-| 1,000 | 100% | 1,880.16 | **1,706.07** | −9.3% | 0.5020 | **0.4582** | −8.7% | 2,321.60 | 2,352.35 | +1.3% | 20 → 28 |
+| 100 | 20% | 367.80 | 192.04 | −47.8% | 0.0875 | 0.0420 | −52.0% | 506.77 | 641.74 | +26.6% | 4 → 10 |
+| 100 | 50% | 273.35 | 150.64 | −44.9% | 0.0681 | 0.0345 | −49.3% | 393.43 | 536.85 | +36.5% | 10 → 24 |
+| 100 | 100% | 233.08 | **148.05** | −36.5% | 0.0599 | **0.0342** | −42.9% | 345.11 | 530.30 | +53.7% | 20 → 34 |
+| 500 | 20% | 1,655.38 | 776.55 | −53.1% | 0.3976 | 0.1729 | −56.5% | 2,051.87 | 2,122.49 | +3.4% | 4 → 10 |
+| 500 | 50% | 1,146.19 | 541.26 | −52.8% | 0.2930 | 0.1308 | −55.4% | 1,440.84 | 1,526.43 | +5.9% | 10 → 24 |
+| 500 | 100% | 933.07 | **478.41** | −48.7% | 0.2497 | **0.1226** | −50.9% | 1,185.10 | 1,367.21 | +15.4% | 20 → 48 |
+| 1,000 | 20% | 3,331.27 | 1,576.32 | −52.7% | 0.7990 | 0.3504 | −56.1% | 4,062.94 | 4,148.59 | +2.1% | 4 → 10 |
+| 1,000 | 50% | 2,313.56 | 1,082.80 | −53.2% | 0.5900 | 0.2615 | −55.7% | 2,841.69 | 2,898.33 | +2.0% | 10 → 24 |
+| 1,000 | 100% | 1,880.16 | **931.53** | −50.5% | 0.5020 | **0.2405** | −52.1% | 2,321.60 | 2,515.13 | +8.3% | 20 → 48 |
 
 Tabel lengkap 8 metrik untuk 50–1,000 task ada di [`docs/figures/topologi_3dc/gocj_tables.md`](docs/figures/topologi_3dc/gocj_tables.md).
 
-![Makespan topologi 3 DC](docs/figures/topologi_3dc/makespan.png)
+![Makespan topologi 3 DC / 48 VM](docs/figures/topologi_3dc/makespan.png)
 
 *Makespan topologi baru terhadap jumlah task GoCJ. Urutan k sama dengan desain awal: k = 100% selalu terendah.*
 
-![Energi topologi 3 DC](docs/figures/topologi_3dc/energi.png)
+![Energi topologi 3 DC / 48 VM](docs/figures/topologi_3dc/energi.png)
 
-*Energi total 6 host selama makespan (kWh) pada topologi baru.*
+*Energi total 6 host selama makespan (kWh) pada topologi baru, dengan daya host yang tidak diubah (lihat 14.6).*
 
 ### 14.6 Analisis
 
-- **Makespan turun di semua skenario.** Rata-rata penurunan pada 11 ukuran task: 12.1% (k = 20%), 10.5% (k = 50%), dan 7.3% (k = 100%). Penyebabnya kapasitas subset kandidat KPB naik: k = 20% kini memuat 4 V3 + 2 V2 (46,000 MIPS, sebelumnya 40,000), k = 50% memuat 14 VM (66,000 MIPS, sebelumnya 58,000), dan k = 100% memuat 28 VM (80,000 MIPS, sebelumnya 72,000). Sesuai rumus bagian 6.6 (makespan ≈ Σ L / kapasitas subset), batas teorinya −13.0%, −12.1%, dan −10.0%. Pada 500–1,000 task hasilnya mendekati batas itu. Pada task sedikit, penurunannya lebih kecil karena makespan dibatasi task terbesar yang tetap harus dikerjakan satu V3.
-- **Energi turun di semua skenario**, rata-rata 12.9% (k = 20%), 10.2% (k = 50%), dan 7.4% (k = 100%), dengan rentang 2.7–13.7%. Ada dua penyebab: makespan lebih pendek, dan total daya idle 6 host turun dari 741 W ke 714 W. Satu host Tipe A (175 W) dan satu host Tipe B (72 W) diganti dua host Tipe C (110 W).
-- **Biaya bergantung pada k dan jumlah task.** Ke-28 VM ditagih selama seluruh simulasi, termasuk VM yang idle (`setVmDestructionDelay` di `SimulationSetup`), jadi 8 VM tambahan menambah biaya RAM, BW, dan pemrosesan. Pada k = 20% dan 50% mulai 400 task, tambahan itu tertutup oleh makespan yang lebih pendek, sehingga biaya turun 0.1–2.9%. Pada task sedikit, dan pada k = 100% di semua ukuran, penurunan makespan tidak cukup menutupinya, sehingga biaya naik (k = 100%: +1.2% di 800 task s.d. +12.8% di 50 task).
-- **Kesimpulan KPB tidak berubah.** Pada heterogenitas konsisten, k = 100% (setara MCT) tetap memberi makespan dan energi terendah. Kandidat yang lebih banyak berarti kapasitas yang dipakai lebih besar.
+- **Makespan turun sekitar setengahnya.** Rata-rata penurunan pada 11 ukuran task: 49.6% (k = 20%), 48.5% (k = 50%), dan 44.8% (k = 100%). Penyebabnya kapasitas subset kandidat KPB naik lebih dari dua kali: 40,000 → 86,000 MIPS (k = 20%), 58,000 → 128,000 (k = 50%), dan 72,000 → 152,000 (k = 100%). Sesuai rumus bagian 6.6 (makespan ≈ Σ L / kapasitas subset), batas teorinya −53.5%, −54.7%, dan −52.6%. Pada 1,000 task hasilnya −52.7%, −53.2%, dan −50.5%, mendekati batas itu. Pada task sedikit, penurunannya lebih kecil karena makespan dibatasi task terbesar yang tetap harus dikerjakan satu V3.
+- **VM V1 tidak selalu terpakai.** Pada 100 task dengan k = 100%, KPB hanya memakai 34 dari 48 VM. Setara MCT, KPB menghindari V1 (1,000 MIPS) selama V3 dan V2 masih bisa menyelesaikan task lebih cepat.
+- **Penurunan energi (sekitar 50%) sebagian besar berasal dari asumsi daya, bukan dari penjadwalan.** Host Tipe A kini punya 3× PE (24 PE) tetapi daya idle/maks-nya tetap 175/250 W, dan host Tipe C 12 PE memakai 110/180 W. Sebagai pembanding, simulasi dengan daya yang dinaikkan sebanding PE (Tipe A 525/750 W, Tipe C 165/270 W) memberi energi hampir sama dengan desain awal:
+
+  | 1,000 task | Energi desain awal | Daya tetap (hasil di atas) | Daya sebanding PE |
+  |:---|:---:|:---:|:---:|
+  | k = 20% | 0.7990 kWh | 0.3504 kWh (−56.1%) | 0.7806 kWh (−2.3%) |
+  | k = 100% | 0.5020 kWh | 0.2405 kWh (−52.1%) | 0.5118 kWh (+2.0%) |
+
+  Jadi energi yang lebih kecil di tabel 14.5 hanya berlaku bila host berkapasitas lebih besar memang tidak memakai daya lebih besar.
+- **Biaya naik, terutama pada task sedikit dan k = 100%.** Ke-48 VM ditagih selama seluruh simulasi, termasuk VM yang idle (`setVmDestructionDelay` di `SimulationSetup`). Jadi 28 VM tambahan menambah biaya RAM, BW, dan pemrosesan. Pada 1,000 task kenaikannya kecil (+2.1%, +2.0%, +8.3%), karena tertutup makespan yang jauh lebih pendek. Pada 50 task kenaikannya sampai +58% s.d. +77%.
+- **Kesimpulan KPB tidak berubah.** Pada heterogenitas konsisten, k = 100% (setara MCT) tetap memberi makespan terendah di semua ukuran task. Utilisasinya pada 1,000 task 88.14% (desain awal 94.40%).
 
 ### 14.7 Cara Mengulang
 
 ```bash
 mvn -q clean compile
-mvn -q exec:java -Dlog=error            # cek blok "=== Infrastruktur CloudSim ===": 3 datacenter, 6 host, 28 VM
+mvn -q exec:java -Dlog=error            # cek blok "=== Infrastruktur CloudSim ===": 3 datacenter, 6 host, 48 VM
 
-SESSION=results/sessions/cloudsim_gocj_3dc_<timestamp> SOURCE=gocj bash scripts/run_grid_cloudsim.sh
-python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_3dc_<timestamp> --out docs/figures/topologi_3dc
+SESSION=results/sessions/cloudsim_gocj_48vm_<timestamp> SOURCE=gocj bash scripts/run_grid_cloudsim.sh
+python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_48vm_<timestamp> --out docs/figures/topologi_3dc
 ```
 
 ### 14.8 Yang Belum Disesuaikan
 
-- **Real-world (bagian 7)** masih memakai 20 container dan 2 datacenter. `kpb_realworld.py` akan berhenti dengan `[ERROR] Kapasitas VM di mapping beda dengan VMS runner ini` sampai `docker-compose.yml`, `kpb_realworld.py`, dan `analyze_grid.py` disesuaikan dengan langkah bagian 9.7. Total kuota CPU topologi baru 80,000 / 10,000 = 8.0 CPU.
+- **Real-world (bagian 7)** masih memakai 20 container dan 2 datacenter. `kpb_realworld.py` akan berhenti dengan `[ERROR] Kapasitas VM di mapping beda dengan VMS runner ini` sampai `docker-compose.yml`, `kpb_realworld.py`, dan `analyze_grid.py` disesuaikan dengan langkah bagian 9.7. Total kuota CPU 48 container = 152,000 / 10,000 = **15.2 CPU**, jadi butuh mesin dengan minimal 16 core.
+- **Daya host** tidak dinaikkan bersama PE (lihat 14.6).
 - **Grid Synthetic 1,000–10,000 task (bagian 6.3)** belum dijalankan ulang dengan topologi baru.
 - **Bagian 3, 6, dan 7** masih berisi angka desain awal.
 
