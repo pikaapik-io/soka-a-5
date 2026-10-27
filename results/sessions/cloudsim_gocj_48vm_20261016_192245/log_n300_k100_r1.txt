@@ -1,0 +1,70 @@
+=== Infrastruktur CloudSim ===
+DC-1 Performance | x86 / Linux / Xen | 2 host | $0.05/s, $0.020/GB RAM, $0.0010/GB storage, $0.005/Mbps BW
+  Host 0 | 24 PE x 3000 MIPS | RAM 64 GB | BW 10000 Mbps | P idle 175 W, P max 250 W | PE terpakai 24/24
+    vm0  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm2  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm4  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm6  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm8  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm10 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm12 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm14 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+  Host 1 | 24 PE x 3000 MIPS | RAM 64 GB | BW 10000 Mbps | P idle 175 W, P max 250 W | PE terpakai 24/24
+    vm1  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm3  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm5  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm7  V3 | 4 PE x 2500 MIPS | RAM 8 GB | BW 1000 Mbps
+    vm9  V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm11 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm13 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm15 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+DC-2 Balanced | x86 / Linux / Xen | 2 host | $0.04/s, $0.015/GB RAM, $0.0009/GB storage, $0.004/Mbps BW
+  Host 0 | 12 PE x 2400 MIPS | RAM 32 GB | BW 8000 Mbps | P idle 110 W, P max 180 W | PE terpakai 12/12
+    vm16 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm18 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm20 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm22 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm24 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm26 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm28 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm30 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+  Host 1 | 12 PE x 2400 MIPS | RAM 32 GB | BW 8000 Mbps | P idle 110 W, P max 180 W | PE terpakai 12/12
+    vm17 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm19 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm21 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm23 V2 | 2 PE x 1500 MIPS | RAM 4 GB | BW 1000 Mbps
+    vm25 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm27 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm29 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm31 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+DC-3 Efficiency | x86 / Linux / Xen | 2 host | $0.03/s, $0.010/GB RAM, $0.0008/GB storage, $0.003/Mbps BW
+  Host 0 | 8 PE x 1800 MIPS | RAM 32 GB | BW 5000 Mbps | P idle 72 W, P max 120 W | PE terpakai 8/8
+    vm32 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm34 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm36 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm38 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm40 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm42 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm44 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm46 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+  Host 1 | 8 PE x 1800 MIPS | RAM 32 GB | BW 5000 Mbps | P idle 72 W, P max 120 W | PE terpakai 8/8
+    vm33 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm35 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm37 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm39 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm41 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm43 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm45 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+    vm47 V1 | 1 PE x 1000 MIPS | RAM 2 GB | BW 500 Mbps
+Total: 3 datacenter, 6 host, 48 VM
+
+scheduler=KPB(k=100.0%)
+tasks=300, vmsCreated=48/48, cloudletsFinished=300/300
+makespan=351.653 s (analitik 349.850 s), energy=0.0874 kWh, avgResponse=137.462 s
+utilization=72.62%, DI=0.5670 (VM terpakai 0.5670), throughput=0.8531 task/s
+cost=$1046.09, schedulingTime=1.598 ms
+prediksi analitik ±349.850 s
+  makespan=351.653s (nyata/prediksi=1.005x), energy=0.087434 kWh, avgResponse=137.462s, utilization=72.62%, DI=0.5670 (VM terpakai 0.5670), throughput=0.853 task/s, cost=$1046.09, schedulingTime=1.598 ms, vmsUsed=48/48
+mapping=[0, 1, 2, 3, 4, 5, 6, 7, 1, 3, 4, 2, 5, 7, 0, 6, 8, 9, 10, 11, 4, 3, 12, 13, 1, 7, 14, 2, 5, 15, 0, 16, 7, 17, 18, 3, 19, 4, 20, 1, 5, 21, 22, 23, 0, 11, 13, 9, 14, 7, 3, 10, 0, 12, 7, 8, 15, 20, 0, 14, 3, 3, 17, 0, 11, 10, 22, 24, 9, 21, 25, 16, 18, 23, 26, 13, 19, 20, 1, 27, 28, 14, 15, 22, 29, 8, 12, 30, 16, 10, 19, 31, 32, 13, 2, 3, 33, 34, 9, 35, 36, 37, 23, 38, 39, 0, 40, 41, 42, 43, 44, 20, 4, 45, 5, 6, 46, 47, 18, 24, 43, 47, 11, 2, 17, 21, 14, 47, 15, 3, 4, 16, 3, 26, 36, 42, 46, 8, 10, 25, 5, 22, 2, 27, 2, 39, 6, 12, 19, 14, 21, 13, 9, 7, 23, 34, 18, 16, 5, 17, 11, 1, 45, 47, 20, 15, 28, 10, 29, 22, 41, 21, 19, 40, 13, 8, 31, 4, 35, 14, 37, 15, 0, 12, 30, 16, 43, 23, 17, 3, 10, 36, 38, 18, 32, 33, 9, 11, 22, 26, 27, 7, 5, 44, 43, 20, 24, 39, 42, 13, 25, 19, 2, 21, 34, 8, 46, 14, 40, 28, 16, 47, 22, 29, 41, 17, 10, 23, 15, 12, 6, 45, 13, 9, 36, 21, 20, 11, 33, 4, 40, 19, 39, 18, 17, 22, 23, 8, 16, 12, 27, 44, 43, 26, 14, 15, 29, 31, 10, 42, 30, 21, 38, 25, 13, 47, 9, 35, 32, 37, 24, 20, 2, 34, 46, 22, 29, 35, 0, 11, 3, 19, 17, 33, 41, 18, 28, 7, 39, 1, 45, 2, 3, 8, 1, 40, 23, 16, 0, 5]
+vmFinish=[282.33, 280.0, 279.13, 283.91, 306.53, 283.69, 278.1, 351.65, 267.53, 265.57, 254.5, 260.96, 253.1, 256.24, 250.96, 251.62, 276.97, 271.75, 262.86, 269.75, 264.31, 256.32, 267.53, 273.75, 212.77, 206.87, 220.87, 228.87, 244.86, 248.42, 249.64, 221.65, 259.65, 255.87, 240.87, 248.81, 207.87, 253.65, 227.65, 255.04, 245.59, 244.87, 244.87, 240.46, 217.65, 248.81, 242.87, 239.62]
+hasil -> results/sessions/cloudsim_gocj_48vm_20261016_192245

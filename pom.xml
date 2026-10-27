@@ -1,31 +1,70 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  pom.xml - konfigurasi build Maven untuk bagian Java proyek (algoritma KPB + simulasi CloudSim Plus).
+
+  Peran file ini:
+    * Menentukan versi Java yang dipakai untuk compile (Java 11).
+    * Mendaftar library (dependency) yang diunduh Maven dari Maven Central: CloudSim Plus untuk simulasi,
+      Jackson untuk menulis file JSON mapping, JUnit 5 untuk unit test.
+    * Mendaftar plugin Maven: surefire (menjalankan test) dan exec (menjalankan main class langsung).
+
+  Cara dipakai (dari root repo):
+    mvn -q compile                       compile src/main/java ke target/classes
+    mvn -q exec:java                     jalankan project.Experiment (main class di <exec.mainClass>)
+    mvn -q exec:java -Dexec.args="..."   jalankan dengan argumen, mis. "- -dataset ... - -k 50" (tanda hubung ganda)
+    mvn test                             jalankan unit test di src/test/java (lewat surefire + JUnit 5)
+    mvn -q compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+                                         dipakai scripts/run_grid_cloudsim.sh dan realworld/run_grid.sh:
+                                         menulis daftar path semua JAR dependency ke target/classpath.txt,
+                                         lalu skrip memanggil "java -cp target/classes:<isi classpath.txt>"
+                                         langsung (lebih cepat daripada mvn exec:java untuk ratusan run).
+                                         Plugin dependency tidak perlu didaftar di bawah: Maven memakai
+                                         versi default-nya.
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <!-- Versi format POM; untuk Maven 3 selalu 4.0.0. -->
     <modelVersion>4.0.0</modelVersion>
+    <!-- Identitas proyek (koordinat Maven): groupId sama dengan nama package Java "project". -->
     <groupId>project</groupId>
     <artifactId>soka-a-5</artifactId>
+    <!-- SNAPSHOT = versi pengembangan (belum rilis). -->
     <version>1.0-SNAPSHOT</version>
 
     <properties>
+        <!-- Compile untuk Java 11. "release" (opsi release milik javac) sudah cukup dan juga mengecek API JDK 11;
+             source/target tetap ditulis untuk tool/IDE lama yang hanya membaca dua property itu. -->
         <maven.compiler.release>11</maven.compiler.release>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <!-- Kode sumber dibaca sebagai UTF-8 (komentar berbahasa Indonesia, simbol seperti ±, ★). -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Main class default untuk "mvn exec:java" (dipakai oleh exec-maven-plugin di bawah).
+             realworld/kpb_realworld.py tetap menulis -Dexec.mainClass=project.Experiment secara eksplisit. -->
         <exec.mainClass>project.Experiment</exec.mainClass>
     </properties>
 
     <dependencies>
+        <!-- CloudSim Plus 6.6.1: framework simulasi cloud (Datacenter, Host, Vm, Cloudlet, broker,
+             CloudletSchedulerSpaceShared, model daya). Inti simulasi di package project.setup dan
+             project.metrics. Secara transitif ikut membawa logback + slf4j (log CloudSim; level-nya
+             diatur Experiment lewat -Dlog=error/info), commons-math3, dll. -->
         <dependency>
             <groupId>org.cloudsimplus</groupId>
             <artifactId>cloudsim-plus</artifactId>
             <version>6.6.1</version>
         </dependency>
+        <!-- Jackson: dipakai Experiment (ObjectMapper) untuk menulis file JSON mapping
+             (- -export-mapping) yang dibaca runner real-world realworld/kpb_realworld.py. -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.17.2</version>
         </dependency>
+        <!-- JUnit 5 (Jupiter): framework unit test, mis. src/test/java/project/model/ScheduleEvaluatorTest.java
+             yang mengecek makespan/energi contoh desain. scope test = hanya dipakai saat compile/menjalankan
+             test, tidak dibutuhkan saat program utama berjalan. -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -36,11 +75,15 @@
 
     <build>
         <plugins>
+            <!-- maven-surefire-plugin: menjalankan unit test pada fase "mvn test". Versi 3.x dipasang
+                 eksplisit karena versi default bawaan Maven lama tidak mendeteksi test JUnit 5. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
             </plugin>
+            <!-- exec-maven-plugin: menyediakan goal "exec:java" untuk menjalankan main class di JVM Maven
+                 tanpa perlu menyusun classpath sendiri. mainClass diambil dari property exec.mainClass. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>

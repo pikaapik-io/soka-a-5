@@ -34,6 +34,7 @@
   - [7.5 Analisis Real-World](#75-analisis-real-world)
   - [7.6 Batasan Real-World](#76-batasan-real-world)
   - [7.7 Kesimpulan Real-World](#77-kesimpulan-real-world)
+  - [7.8 Deployment Kubernetes (Kind)](#78-deployment-kubernetes-kind)
 - [8. Panduan Menjalankan Sim](#8-panduan-menjalankan-sim)
 - [9. Panduan Mengubah Datacenter, Host, dan VM](#9-panduan-mengubah-datacenter-host-dan-vm)
 - [10. Struktur Direktori](#10-struktur-direktori)
@@ -153,7 +154,7 @@ Konsekuensinya, makin kecil k, makin sedikit VM yang terpakai, sehingga k menent
 
 ## 3. Arsitektur Datacenter
 
-> **Catatan:** bagian ini mendokumentasikan desain awal (2 datacenter × 3 host, 20 VM). Kode sekarang memakai topologi 3 datacenter × 2 host, 48 VM. Lihat [bagian 14. Hasil Perubahan](#14-hasil-perubahan).
+> **Topologi aktif:** 2 datacenter × 3 host = 6 host dan 20 VM. Hasil 48 VM yang masih tercantum di bagian 14 adalah catatan eksperimen topologi sementara, bukan konfigurasi aktif.
 
 Arsitektur terdiri atas dua datacenter dengan karakter berbeda: satu berorientasi kinerja dan satu berorientasi efisiensi energi.
 
@@ -346,6 +347,8 @@ Pemetaan ke cloudlet (Desain bagian 1.3):
 ## 6. Hasil Simulasi (CloudSim Plus)
 
 Semua angka di bagian ini adalah hasil **simulasi CloudSim Plus 6.6.1 penuh**, bukan hitungan rumus. Rumus (model analitik f1 dan rumus kapasitas di 6.6) hanya dipakai sebagai pembanding dan penjelasan.
+
+> **Catatan versi hasil:** tabel dan log historis di bagian ini memuat hasil dari beberapa revisi topologi. Kode aktif kini dikembalikan ke 2 datacenter, 6 host, dan 20 VM; jalankan ulang `mvn -q exec:java` untuk menghasilkan bukti dan CSV dari konfigurasi aktif.
 
 ### 6.1 Cara Pengujian di CloudSim Plus
 
@@ -626,7 +629,7 @@ Kesembilan grafik di bagian 6.5 dapat dibaca sebagai satu cerita: **semua metrik
 
 ## 7. Implementasi Real-World
 
-Di simulasi, CloudSim *menghitung* eksekusi cloudlet. Di real world, task GoCJ yang sama **benar-benar dieksekusi** di 20 container Docker, lalu makespan diukur dengan jam dinding (wall-clock). Infrastruktur container mengikuti Desain bagian 2 dan penempatan VM hasil CloudSim.
+Di simulasi, CloudSim *menghitung* eksekusi cloudlet. Di real world, task GoCJ yang sama **benar-benar dieksekusi** oleh 20 worker container, lalu makespan diukur dengan jam dinding (wall-clock). Worker dapat dijalankan dengan Docker Compose atau sebagai Pod Kubernetes; jalur Kubernetes memetakan 2 DC logis, 6 node worker, dan 20 VM.
 
 ### 7.1 Arsitektur
 
@@ -639,7 +642,7 @@ flowchart LR
     end
 
     subgraph NET1["Jaringan soka_dc1_performance (DC-1)"]
-        A["Host A0–A2<br/>vm00–vm03 V3 · 4 PE × 0.25 CPU<br/>vm04–vm07 V2 · 2 PE × 0.15 CPU"]
+        A["Host A0–A2<br/>vm00–vm03 V3 · 1.0 CPU limit<br/>vm04–vm07 V2 · 0.3 CPU limit"]
     end
 
     subgraph NET2["Jaringan soka_dc2_efficiency (DC-2)"]
@@ -654,8 +657,8 @@ flowchart LR
 
 | Komponen | File | Peran |
 |:---|:---|:---|
-| 20 "VM" | [`realworld/docker-compose.yml`](realworld/docker-compose.yml) | Container `python:3.12-slim`. Batas CPU, jumlah PE, RAM, jaringan DC, dan label host sesuai desain |
-| Worker | [`realworld/worker/worker.py`](realworld/worker/worker.py) | Server HTTP di tiap container dengan `PES` proses PE yang meniru `CloudletSchedulerTimeShared` |
+| 20 "VM" | [`realworld/docker-compose.yml`](realworld/docker-compose.yml) atau manifest Kind | Container/Pod worker dengan batas CPU, RAM, DC, dan host sesuai desain |
+| Worker | [`realworld/worker/worker.py`](realworld/worker/worker.py) | Satu server HTTP per VM; tiap VM mengeksekusi batch secara FIFO/sekuensial, seperti `CloudletSchedulerSpaceShared` |
 | Runner | [`realworld/kpb_realworld.py`](realworld/kpb_realworld.py) | Mengambil mapping KPB dari kode Java yang sama dengan simulasi, mengeksekusinya, 8 metrik desain, repetisi, ekspor CSV |
 
 ### 7.2 Pemetaan Simulasi → Real World
@@ -663,22 +666,22 @@ flowchart LR
 | Konsep desain / CloudSim | Real world |
 |:---|:---|
 | Skala MIPS | 1.0 CPU container = 10,000 MIPS |
-| VM V3 (4 PE × 2,500) | Container 1.0 CPU dengan 4 proses PE, masing-masing ≤ 0.25 CPU |
-| VM V2 (2 PE × 1,500) | Container 0.3 CPU dengan 2 proses PE, masing-masing ≤ 0.15 CPU |
-| VM V1 (1 PE × 1,000) | Container 0.1 CPU dengan 1 proses PE |
+| VM V3 (4 PE × 2,500) | Container/Pod dengan batas 1.0 CPU; task di VM tetap dikerjakan berurutan |
+| VM V2 (2 PE × 1,500) | Container/Pod dengan batas 0.3 CPU; task di VM tetap dikerjakan berurutan |
+| VM V1 (1 PE × 1,000) | Container/Pod dengan batas 0.1 CPU |
 | RAM VM (8 / 4 / 2 GB) | `mem_limit` container 8g / 4g / 2g |
-| DC-1 / DC-2 | Jaringan Docker `soka_dc1_performance` / `soka_dc2_efficiency` |
-| Host & penempatan VM | Label `soka.host`, sama dengan `results/simulation/placement.csv` (dicek otomatis setiap run) |
-| Cloudlet 1 PE, `L_i` MI | `L_i × 14` iterasi CPU, dikerjakan oleh **satu** PE pada satu waktu |
-| `CloudletSchedulerTimeShared` | Semua task di satu VM aktif bersamaan dan bergiliran per *chunk* (50,000 iterasi) di PE yang tersedia |
+| DC-1 / DC-2 | Jaringan Docker Compose atau namespace Kubernetes `dc1-performance` / `dc2-efficiency` |
+| Host & penempatan VM | Label `soka.host` pada node worker dan nodeSelector pada Pod; tabel penempatan sama dengan CloudSim |
+| Task `L_i` MI | `L_i × 14` iterasi CPU, dikerjakan berurutan pada CPU limit total VM |
+| `CloudletSchedulerSpaceShared` | Satu VM menjalankan task berurutan (FIFO), sesuai worker |
 | Makespan, response time | Waktu selesai task (jam *monotonic* bersama host–container) dihitung dari t0 batch |
 | Energi (`PowerModelHostSimple`) | Model daya desain diterapkan pada CPU yang **diukur** dari cgroup tiap container, dikelompokkan per host |
 | Biaya (`VmCost`) | Rumus yang sama dengan CloudSim, dengan umur VM = makespan nyata |
 
 Tiga hal yang membuat eksekusinya nyata, bukan sekadar meniru durasi:
 
-1. **Beban berbasis jumlah kerja.** Worker tidak diberi tahu berapa lama harus berjalan. Jumlah iterasi task sama di container mana pun, dan perbedaan waktu berasal dari batas CPU kernel (CFS, `cpu_quota` dengan periode 10 ms) serta batas per PE.
-2. **Batas 1 PE per task pada worker Docker.** Satu task dijalankan oleh satu proses PE; V3 dapat mengerjakan hingga empat task berbeda bersamaan, tetapi satu task tidak memakai keempat PE. Ini berbeda dari CloudSim terbaru, yang memberi satu Cloudlet semua PE VM tujuannya.
+1. **Beban berbasis jumlah kerja.** Worker tidak diberi tahu berapa lama harus berjalan. Jumlah iterasi task sama di container mana pun, dan perbedaan waktu berasal dari batas CPU kernel (cgroup CPU limit pada Docker atau Kubernetes).
+2. **Worker menjalankan antrean secara sekuensial.** Satu task berjalan pada satu VM pada satu waktu. CPU limit mengatur kecepatan efektif VM, dan antreannya cocok dengan perhitungan `ready + ETC` KPB.
 3. **Mapping identik dengan simulasi.** Algoritma tidak ditulis ulang di Python: `kpb_realworld.py` memanggil `project.Experiment --no-sim --export-mapping` (atau membaca JSON hasil ekspor lewat `--mapping`), jadi mapping real-world selalu berasal dari kode Java yang sama dengan CloudSim.
 
 ### 7.3 Cara Menjalankan
@@ -716,9 +719,9 @@ Saat pertama kali, Docker mengunduh image `python:3.12-slim` (±50 MB). Bila seb
 ```bash
 docker ps --filter name=kpb_vm --format '{{.Names}}  {{.Status}}'   # harus 20 baris "Up"
 curl http://127.0.0.1:9100/health
-# {"vm": "vm00", "pes": 4, "pe_share": 0.25, "status": "ok"}
+# {"vm": "vm00", "vm_type": "V3", "sequential": true, "status": "ok"}
 curl http://127.0.0.1:9119/health
-# {"vm": "vm19", "pes": 1, "pe_share": 0.1, "status": "ok"}
+# {"vm": "vm19", "vm_type": "V1", "sequential": true, "status": "ok"}
 ```
 
 #### Langkah 5: Uji coba cepat (±15 detik)
@@ -974,7 +977,7 @@ Ringkasan dari hasil 7.4, ditambah dua temuan yang tidak langsung terlihat dari 
 #### Anomali
 
 - **100 task: k = 50% lebih cepat dari k = 100%.** Dengan task sedikit, makespan ditentukan oleh beberapa task raksasa (900,000 MI). Di k = 100%, task 900,000 MI kebetulan berjalan sendirian di akhir sehingga paling lama selesai. Ini efek penempatan, bukan karena k = 50% lebih baik, dan polanya hilang di 500/1000 task.
-- **Model satu-PE tetap berlaku untuk runner Docker, bukan CloudSim.** Worker Docker menjalankan satu task pada satu PE; karena itu V3 dapat menyisakan PE ketika task yang aktif kurang dari empat. Di CloudSim masalah satu-PE sudah diperbaiki: setiap Cloudlet memakai seluruh PE VM tujuan. Grid CloudSim (63 run) menunjukkan makespan hanya 0.4–1.8% di atas f1 (bagian 6.4).
+- **Model worker bukan simulasi core fisik.** Setiap VM menjalankan satu task berurutan dan CPU limit mewakili total kapasitas VM (V3=1.0 CPU, V2=0.3 CPU, V1=0.1 CPU). Kind/Compose tidak meniru topologi PE fisik maupun bandwidth.
 - **Pengujian awal (3 repetisi) untuk 1000 task tidak stabil** (std makespan sampai ±23.5 s, urutan sempat tidak sesuai teori — data ini ada di `realworld/results/aggregate.csv` baris `runs=3`, bukan di tabel 7.4). Setelah diuji ulang dalam kondisi laptop yang lebih terkontrol (tabel 7.4, baris `runs=1`), hasilnya kembali sesuai teori. Dugaan penyebab: beban laptop, suhu, dan CPU hybrid (core cepat + core lambat) — lihat bagian 7.6.
 - **Keunggulan k = 100% lebih kecil dari teori** (1.3× di S3 vs perkiraan ~2× berdasarkan rasio MIPS). Dugaan: saat 20 container aktif bersamaan, sebagian tetap berjalan di core laptop yang lebih lambat (lihat rasio nyata/prediksi di tabel 7.4, naik seiring jumlah proses PE aktif). Artinya hasil ini cenderung **konservatif** — di infrastruktur fisik sungguhan (bukan laptop berbagi satu CPU), keunggulan k = 100% kemungkinan lebih besar lagi.
 
@@ -985,6 +988,177 @@ Ringkasan dari hasil 7.4, ditambah dua temuan yang tidak langsung terlihat dari 
 - Pada desain infrastruktur ini, **k = 100% adalah pilihan terbaik**, terutama untuk jumlah task besar.
 - k kecil hanya membatasi VM yang boleh dipakai tanpa memberi keuntungan, karena VM tercepat selalu sama untuk semua task.
 - Pada beban kecil, perbedaan antar k tidak bisa dijadikan patokan karena dipengaruhi penempatan beberapa task raksasa.
+
+### 7.8 Deployment Kubernetes (Kind)
+
+Deployment berikut menjalankan topologi yang sama pada Kubernetes lokal:
+
+- 1 cluster Kind dengan 1 control-plane dan **6 worker node** berlabel 3 host DC-1 dan 3 host DC-2.
+- 2 namespace sebagai pemisahan logis datacenter.
+- 20 Pod worker, dipatok ke node lewat `nodeSelector: soka.host`.
+- 20 NodePort Service; port host `9100–9119` diteruskan ke `30100–30119`, sehingga runner KPB tetap menggunakan endpoint yang sama.
+- KPB tetap dihitung oleh Java (`KpbScheduler`), bukan diulang di generator Python. Runner mengambil mapping tersebut lalu mengirim task ke Pod VM yang terpilih.
+
+> **Batas representasi:** Kind menjalankan ketujuh node sebagai container Docker pada satu mesin. Label host dan namespace membuat topologi dapat didemokan dan diuji, tetapi bukan enam server fisik atau dua lokasi geografis yang terpisah. Untuk real cloud multi-host, gunakan enam VM/worker dari penyedia cloud dan pertahankan label Kubernetes yang sama.
+
+Tabel hasil 7.4 adalah pengukuran historis runner Docker di laptop, bukan hasil benchmark Kind. Jalankan ulang runner pada Kind untuk memperoleh angka yang mewakili cluster ini.
+
+#### Prasyarat
+
+Docker Engine/ Docker Desktop, `kind`, `kubectl`, Java JDK 11+, Maven 3.8+, dan Python 3.8+ (generator/runner memakai standard library). Cek semuanya:
+
+```bash
+docker version
+kind version
+kubectl version --client
+java -version
+mvn -version
+python3 --version
+```
+
+Kind menjalankan 7 node sebagai container Docker, jadi perlu alokasi memori Docker/WSL yang cukup. Pastikan Docker daemon hidup. Jika port `9100–9119` sedang dipakai, hentikan lebih dulu deployment lain, khususnya Docker Compose real-world:
+
+```bash
+cd realworld
+docker compose down
+```
+
+#### Langkah 1: Buat cluster Kind dengan 6 worker
+
+Jalankan dari folder `realworld/`. Perintah `kind create cluster` dilakukan satu kali; kalau cluster `soka-cloud` sudah ada, lanjut ke langkah 2 atau hapus cluster lama terlebih dahulu.
+
+```bash
+cd realworld
+kind create cluster --name soka-cloud --config kind-config.yaml
+kubectl cluster-info --context kind-soka-cloud
+kubectl get nodes
+```
+
+Cluster siap jika satu control-plane dan enam worker tampil dengan status `Ready`.
+
+#### Langkah 2: Build/load worker dan deploy 20 VM
+
+```bash
+docker build -t soka-worker:v1 .
+kind load docker-image soka-worker:v1 --name soka-cloud
+python3 generate_k8s.py
+kubectl apply -f k8s-topology.yaml
+kubectl wait --for=condition=Ready pod --all -n dc1-performance --timeout=180s
+kubectl wait --for=condition=Ready pod --all -n dc2-efficiency --timeout=180s
+```
+
+Generator membuat manifest 2 namespace, 20 Pod, dan 20 NodePort Service. Image dimuat langsung ke node Kind; Pod memakai `imagePullPolicy: Never`, jadi langkah `kind load` jangan dilewati.
+
+#### Langkah 3: Pastikan topologi dan penempatan benar
+
+```bash
+kubectl get nodes -L soka.dc,soka.host,soka.host_type
+kubectl get pods -A -l app=soka-vm -o wide --show-labels
+kubectl get svc -A
+kubectl get namespaces dc1-performance dc2-efficiency
+kubectl get pods -A -l app=soka-vm --no-headers | wc -l
+```
+
+Yang harus terlihat:
+
+- Tepat **6 worker node** `Ready`, tiga berlabel `DC-1`/host `dc1-hostA0..2` dan tiga `DC-2`/host `dc2-hostB0..2`. Control-plane tidak dihitung sebagai host.
+- Jumlah Pod adalah **20**. Semua berstatus `Running` dan `READY 1/1`; kolom `NODE` menunjukkan VM ditempatkan di host yang sesuai. Namespace-nya hanya `dc1-performance` atau `dc2-efficiency`.
+- Service `vm00-svc` sampai `vm19-svc` bertipe `NodePort`, dengan port `30100` sampai `30119`.
+
+Tes endpoint worker di dua ujung port:
+
+```bash
+curl --fail http://127.0.0.1:9100/health
+curl --fail http://127.0.0.1:9119/health
+```
+
+Keduanya harus mengembalikan JSON dengan `"status": "ok"` dan `"sequential": true`; worker pertama melaporkan `"vm": "vm00"`/`"vm_type": "V3"`, terakhir `"vm": "vm19"`/`"vm_type": "V1"`. Cek seluruh 20 endpoint:
+
+```bash
+for port in $(seq 9100 9119); do
+  printf '%s ' "$port"
+  curl --fail --silent "http://127.0.0.1:${port}/health"
+  echo
+done
+```
+
+Konfigurasi node/port ada di [`realworld/kind-config.yaml`](realworld/kind-config.yaml); daftar kapasitas dan placement VM ada di [`realworld/generate_k8s.py`](realworld/generate_k8s.py).
+
+#### Langkah 4: Siapkan placement CloudSim dan jalankan KPB real-world
+
+Dari root repository, jalankan simulasi sekali agar `results/simulation/placement.csv` dibuat/ diperbarui dengan topologi 2 DC/6 host/20 VM. Ini memungkinkan runner membandingkan placement Kubernetes dengan CloudSim:
+
+```bash
+cd ..
+mvn -q exec:java -Dexec.args="--dataset src/main/resources/dataset/GoCJ_Dataset_100.txt --k 20"
+```
+
+Pastikan output CloudSim menyebut `Total: 2 datacenter, 6 host, 20 VM` dan `vmsCreated=20/20`. Kemudian jalankan runner dari folder `realworld/`. Mulai dari smoke test 10 task:
+
+```bash
+cd realworld
+python3 kpb_realworld.py \
+  --dataset ../src/main/resources/dataset/GoCJ_Dataset_100.txt \
+  --limit 10 --k 20 --repeat 1 --quiet
+```
+
+Jika smoke test sukses, jalankan dataset 100 task penuh (opsional, bisa lebih lama):
+
+```bash
+python3 kpb_realworld.py \
+  --dataset ../src/main/resources/dataset/GoCJ_Dataset_100.txt \
+  --k 20 --repeat 1
+```
+
+Runner memanggil Java/Maven untuk menghitung mapping KPB, memeriksa 20 worker dan tipe VM, mencocokkan placement CloudSim, lalu mengirim setiap batch ke Pod melalui port `9100–9119`.
+
+#### Langkah 5: Tanda bahwa real-world berhasil
+
+Run dianggap sukses jika proses berakhir dengan exit code `0`, tidak ada `[ERROR]`, dan output menunjukkan informasi seperti:
+
+```text
+scheduler=KPB(k=20.0%) realworld, placement cocok dengan CloudSim
+dataset=../src/main/resources/dataset/GoCJ_Dataset_100.txt tasks=10 ...
+[run 1] menjalankan task di container...
+  makespan=...s (...), energy=... kWh, ...
+rata-rata ± std dari 1 run:
+...
+hasil -> .../summary.csv, .../aggregate.csv, .../tasks_...csv
+```
+
+Selain output terminal, pastikan Pod masih sehat dan hasil CSV sudah dibuat:
+
+```bash
+kubectl get pods -A -l app=soka-vm
+ls -lt results/sessions
+```
+
+Runner membuat folder sesi di `realworld/results/sessions/` (atau path yang ditentukan `--out`), berisi `summary.csv`, `aggregate.csv`, detail per-task, dan JSON mapping. Untuk tes singkat dengan folder output eksplisit, tambahkan `--out results_demo_k8s`.
+
+#### Jika ada yang gagal
+
+```bash
+kubectl get pods -A -o wide
+kubectl describe pods -n dc1-performance
+kubectl describe pods -n dc2-efficiency
+kubectl get events -A --sort-by=.lastTimestamp
+kubectl logs -n dc1-performance kpb-vm00
+kubectl logs -n dc2-efficiency kpb-vm19
+```
+
+- Pod `Pending`: cek label node dan placement dengan `kubectl get nodes -L soka.dc,soka.host,soka.host_type`; Pod dijadwalkan menggunakan label `soka.host`.
+- `ImagePullBackOff` atau `ErrImageNeverPull`: ulangi `docker build -t soka-worker:v1 .` lalu `kind load docker-image soka-worker:v1 --name soka-cloud`; apply ulang manifest.
+- Endpoint `curl` gagal: pastikan Pod `READY 1/1`, lihat `kubectl logs`, dan cek port host `9100–9119` tidak digunakan proses lain.
+- Pesan `placement ... beda dengan CloudSim`: jalankan ulang simulasi dari root repository supaya `results/simulation/placement.csv` sesuai konfigurasi aktif 20 VM.
+
+#### Hentikan deployment setelah demo
+
+Dari folder `realworld/`, hapus workload dan cluster Kind:
+
+```bash
+kubectl delete -f k8s-topology.yaml
+kind delete cluster --name soka-cloud
+```
 
 ---
 
@@ -1263,7 +1437,7 @@ V2_MEDIUM(8, 2, 1_500, 4_096, 1_000),
 V1_SMALL(12, 1, 1_000, 2_048, 500);   // 8 -> 12: total jadi 24 VM
 ```
 
-Contoh uji di atas (pada desain awal) menghasilkan 24/24 VM dibuat, dan VM 20–23 (V1 tambahan) ditempatkan di DC-2 karena DC-1 sudah penuh. Indeks VM bergeser sesuai urutan tipe: VM 0–3 = V3, 4–11 = V2, 12–23 = V1. Topologi sekarang memakai 8 V3 + 16 V2 + 24 V1 (48 VM, bagian 14).
+Contoh uji di atas (pada desain awal) menghasilkan 24/24 VM dibuat, dan VM 20–23 (V1 tambahan) ditempatkan di DC-2 karena DC-1 sudah penuh. Indeks VM bergeser sesuai urutan tipe: VM 0–3 = V3, 4–11 = V2, 12–23 = V1. Konfigurasi aktif dikembalikan ke 4 V3 + 8 V2 + 8 V1 (20 VM).
 
 **Menambah tipe VM baru:** tambahkan konstanta baru. Urutan argumen: jumlah VM, PE, MIPS/PE, RAM MB, BW Mbps.
 
@@ -1480,14 +1654,16 @@ Jika energi dan biaya ingin dioptimalkan secara langsung, diperlukan algoritma a
 
 ## 14. Hasil Perubahan
 
-Topologi simulasi diganti dari **2 datacenter × 3 host / 20 VM** (desain awal, bagian 3) menjadi **3 datacenter × 2 host / 48 VM**. Ke-48 VM dibagi rata ke 6 host, **8 VM per host**. Supaya muat, PE host dinaikkan:
+Bagian ini mencatat eksperimen sementara yang mengubah desain menjadi **3 datacenter × 2 host / 48 VM**. Topologi itu bukan konfigurasi aktif lagi: kode Java dan runner real-world sekarang kembali memakai Grand Design **2 datacenter × 3 host / 20 VM**. Tabel dan gambar di bawah tetap disimpan sebagai hasil historis dari konfigurasi 48 VM dan tidak boleh dianggap sebagai hasil dari topologi aktif.
+
+Pada eksperimen historis tersebut, ke-48 VM dibagi rata ke 6 host, **8 VM per host**. Supaya muat, PE host dinaikkan:
 - host Tipe A: 8 → **24 PE**, RAM 32 → 64 GB;
 - host Tipe C (baru, di DC-2 Balanced): **12 PE**;
 - host Tipe B: tetap 8 PE.
 
 Spesifikasi ketiga tipe VM (V3, V2, V1) dan daya host tidak berubah (lihat catatan energi di 14.6). Kode di `src/` sekarang memakai topologi ini. Bagian 3, 6, dan 7 tetap berisi desain dan hasil awal sebagai pembanding.
 
-### 14.1 Apa yang Berubah
+### 14.1 Rincian Eksperimen Topologi Sementara
 
 | Komponen | Desain awal | Topologi baru |
 |:---|:---:|:---:|
@@ -1633,12 +1809,12 @@ SESSION=results/sessions/cloudsim_gocj_48vm_<timestamp> SOURCE=gocj bash scripts
 python3 scripts/plot_grid.py gocj=results/sessions/cloudsim_gocj_48vm_<timestamp> --out docs/figures/topologi_3dc
 ```
 
-### 14.8 Yang Belum Disesuaikan
+### 14.8 Status terhadap Topologi Aktif
 
-- **Real-world (bagian 7)** masih memakai 20 container dan 2 datacenter. `kpb_realworld.py` akan berhenti dengan `[ERROR] Kapasitas VM di mapping beda dengan VMS runner ini` sampai `docker-compose.yml`, `kpb_realworld.py`, dan `analyze_grid.py` disesuaikan dengan langkah bagian 9.7. Total kuota CPU 48 container = 152,000 / 10,000 = **15.2 CPU**, jadi butuh mesin dengan minimal 16 core.
+- **Runner real-world aktif** memakai 20 worker, 2 DC, dan kapasitas total 7.2 CPU. Docker Compose dan Kubernetes Kind menggunakan endpoint yang sama; manifest Kind ada di bagian 7.8.
 - **Daya host** tidak dinaikkan bersama PE (lihat 14.6).
 - **Grid Synthetic 1,000–10,000 task (bagian 6.3)** belum dijalankan ulang dengan topologi baru.
-- **Bagian 3, 6, dan 7** masih berisi angka desain awal.
+- **Bagian 14.1–14.7 dan grafiknya** tetap menyimpan hasil historis dari topologi 48 VM; hasil tersebut bukan benchmark untuk konfigurasi aktif 20 VM.
 
 ---
 

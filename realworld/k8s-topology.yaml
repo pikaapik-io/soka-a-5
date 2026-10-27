@@ -1,0 +1,1353 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dc1-performance
+  labels:
+    soka.dc: "DC-1"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dc2-efficiency
+  labels:
+    soka.dc: "DC-2"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm00
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm00
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA0"
+    soka.vm_type: "V3"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA0"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm00"
+        - name: VM_TYPE
+          value: "V3"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "1000m"
+          memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm00-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm00
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30100
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm01
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm01
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA1"
+    soka.vm_type: "V3"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA1"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm01"
+        - name: VM_TYPE
+          value: "V3"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "1000m"
+          memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm01-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm01
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30101
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm02
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm02
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA2"
+    soka.vm_type: "V3"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA2"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm02"
+        - name: VM_TYPE
+          value: "V3"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "1000m"
+          memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm02-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm02
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30102
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm03
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm03
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA0"
+    soka.vm_type: "V3"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA0"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm03"
+        - name: VM_TYPE
+          value: "V3"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "1000m"
+          memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm03-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm03
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30103
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm04
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm04
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA1"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA1"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm04"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm04-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm04
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30104
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm05
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm05
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA2"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA2"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm05"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm05-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm05
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30105
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm06
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm06
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA1"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA1"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm06"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm06-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm06
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30106
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm07
+  namespace: dc1-performance
+  labels:
+    app: soka-vm
+    vm: vm07
+    soka.dc: "DC-1"
+    soka.host: "dc1-hostA2"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc1-hostA2"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm07"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm07-svc
+  namespace: dc1-performance
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm07
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30107
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm08
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm08
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB0"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB0"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm08"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm08-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm08
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30108
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm09
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm09
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB1"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB1"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm09"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm09-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm09
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30109
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm10
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm10
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB2"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB2"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm10"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm10-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm10
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30110
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm11
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm11
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB0"
+    soka.vm_type: "V2"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB0"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm11"
+        - name: VM_TYPE
+          value: "V2"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "300m"
+          memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm11-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm11
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30111
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm12
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm12
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB1"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB1"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm12"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm12-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm12
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30112
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm13
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm13
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB2"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB2"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm13"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm13-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm13
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30113
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm14
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm14
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB1"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB1"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm14"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm14-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm14
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30114
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm15
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm15
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB2"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB2"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm15"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm15-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm15
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30115
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm16
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm16
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB0"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB0"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm16"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm16-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm16
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30116
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm17
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm17
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB1"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB1"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm17"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm17-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm17
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30117
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm18
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm18
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB2"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB2"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm18"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm18-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm18
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30118
+      protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kpb-vm19
+  namespace: dc2-efficiency
+  labels:
+    app: soka-vm
+    vm: vm19
+    soka.dc: "DC-2"
+    soka.host: "dc2-hostB0"
+    soka.vm_type: "V1"
+spec:
+  nodeSelector:
+    soka.host: "dc2-hostB0"
+  containers:
+    - name: worker
+      image: soka-worker:v1
+      imagePullPolicy: Never
+      ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 2
+        timeoutSeconds: 1
+        failureThreshold: 30
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: http
+        periodSeconds: 10
+        timeoutSeconds: 1
+      env:
+        - name: VM_NAME
+          value: "vm19"
+        - name: VM_TYPE
+          value: "V1"
+        - name: PORT
+          value: "8000"
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vm19-svc
+  namespace: dc2-efficiency
+spec:
+  type: NodePort
+  selector:
+    app: soka-vm
+    vm: vm19
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      nodePort: 30119
+      protocol: TCP

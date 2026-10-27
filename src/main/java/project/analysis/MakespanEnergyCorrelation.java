@@ -13,17 +13,50 @@ import project.model.ScheduleContext;
 import project.model.ScheduleEvaluator;
 
 /**
- * Fase 3 required analysis: 1000 random mappings on a dataset, to check whether
- * makespan and energy are genuinely different objectives (Pearson correlation)
- * and how large the dynamic energy component is relative to total energy.
+ * Analisis wajib Fase 3: 1000 mapping acak pada sebuah dataset, untuk mengecek
+ * apakah makespan dan energi benar-benar tujuan (objective) yang berbeda
+ * (korelasi Pearson) dan seberapa besar komponen energi dinamis dibanding total
+ * energi.
  *
- * Usage: MakespanEnergyCorrelation [dataset] [sampleCount] [seed]
+ * <p><b>Ide:</b> bila korelasi makespan-energi mendekati 1, meminimalkan makespan
+ * hampir otomatis meminimalkan energi (keduanya bukan trade-off nyata). Hal ini
+ * terjadi bila energi idle (P_idle x makespan, semua host selalu menyala)
+ * mendominasi; {@code dynamicShare} menunjukkan seberapa kecil porsi energi yang
+ * benar-benar bergantung pada beban.</p>
+ *
+ * <p>Program ini berdiri sendiri dan hanya memakai model analitik
+ * {@code ScheduleEvaluator} (O(jumlah task) per mapping), tanpa menjalankan
+ * CloudSim, sehingga 1000 sampel bisa dihitung dalam waktu singkat. Hasil per
+ * sampel ditulis ke results/analysis/makespan_energy_&lt;dataset&gt;.csv.</p>
+ *
+ * Cara pakai: MakespanEnergyCorrelation [dataset] [sampleCount] [seed]
  */
 public final class MakespanEnergyCorrelation {
+	/** Folder output CSV detail. */
 	private static final Path OUTPUT_DIR = Path.of("results", "analysis");
 
+	// Hanya berisi main dan helper static, constructor private.
 	private MakespanEnergyCorrelation() { }
 
+	/**
+	 * Titik masuk program.
+	 *
+	 * <p><b>Alur:</b></p>
+	 * <ol>
+	 *   <li>Baca argumen: dataset (default GoCJ 500), jumlah sampel (default 1000),
+	 *       seed acak (default 42, agar hasil bisa diulang persis).</li>
+	 *   <li>Muat panjang task dan bangun evaluator analitik dari desain
+	 *       (20 VM, 6 host, penempatan VM yang sama dengan CloudSim).</li>
+	 *   <li>Untuk setiap sampel: buat mapping acak (setiap task ke VM acak
+	 *       0..47 dengan peluang sama), hitung makespan, energi total, dan porsi
+	 *       energi dinamis, lalu tulis satu baris CSV.</li>
+	 *   <li>Hitung korelasi Pearson makespan vs energi, serta porsi energi dinamis
+	 *       minimum dan maksimum, lalu cetak ringkasannya.</li>
+	 * </ol>
+	 *
+	 * @param args [0] = path dataset, [1] = jumlah sampel, [2] = seed (semua opsional)
+	 * @throws IOException bila dataset tidak bisa dibaca atau CSV tidak bisa ditulis
+	 */
 	public static void main(String[] args) throws IOException {
 		Path dataset = Path.of(args.length > 0 ? args[0] : "src/main/resources/dataset/GoCJ_Dataset_500.txt");
 		int samples = args.length > 1 ? Integer.parseInt(args[1]) : 1000;
@@ -34,6 +67,7 @@ public final class MakespanEnergyCorrelation {
 		ScheduleEvaluator evaluator = new ScheduleEvaluator(context);
 		int vmCount = context.vmCount();
 
+		// Seed tetap -> urutan angka acak sama setiap run (reproducible).
 		Random random = new Random(seed);
 		double[] makespans = new double[samples];
 		double[] energies = new double[samples];
@@ -42,17 +76,23 @@ public final class MakespanEnergyCorrelation {
 		Files.createDirectories(OUTPUT_DIR);
 		String name = dataset.getFileName().toString().replaceFirst("\\.txt$", "");
 		Path detail = OUTPUT_DIR.resolve("makespan_energy_" + name + ".csv");
+		// CREATE + TRUNCATE_EXISTING: file lama ditimpa, bukan ditambahkan.
 		try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(detail,
 				StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING))) {
 			out.println("sample,makespan_s,energy_kwh,dynamic_share");
 			for (int s = 0; s < samples; s++) {
+				// Mapping acak seragam: setiap task dikirim ke salah satu dari vmCount VM.
 				int[] mapping = new int[taskLengths.length];
 				for (int t = 0; t < mapping.length; t++) {
 					mapping[t] = random.nextInt(vmCount);
 				}
+				// energyBreakdown memisahkan energi idle (sum_h P_idle_h * makespan) dan dinamis
+				// (sum_j (P_max_h - P_idle_h) * (C_j / MIPS_h) * load_j).
 				ScheduleEvaluator.EnergyBreakdown breakdown = evaluator.energyBreakdown(mapping);
+				// makespan = max_j load_j, load_j = sum L_i / C_j (model antrean sekuensial f1).
 				makespans[s] = evaluator.makespanFromLoads(evaluator.vmLoads(mapping));
 				energies[s] = breakdown.totalKwh();
+				// dynamicShare = energi dinamis / energi total.
 				dynamicShares[s] = breakdown.dynamicShare();
 				out.printf(Locale.US, "%d,%.6f,%.8f,%.6f%n", s, makespans[s], energies[s], dynamicShares[s]);
 			}
@@ -71,7 +111,18 @@ public final class MakespanEnergyCorrelation {
 		System.out.println("detail -> " + detail);
 	}
 
-	/** Pearson correlation coefficient of two equal-length samples. */
+	/**
+	 * Koefisien korelasi Pearson dari dua sampel yang panjangnya sama.
+	 *
+	 * <p>r = sum (x_i - mean_x)(y_i - mean_y) / sqrt( sum (x_i - mean_x)^2 * sum (y_i - mean_y)^2 ).
+	 * Faktor 1/n pada kovarians dan varians saling meniadakan, jadi tidak perlu
+	 * dibagi n. Nilai r berada di [-1, 1]: 1 = naik bersama secara linear sempurna,
+	 * 0 = tidak ada hubungan linear, -1 = berlawanan arah.</p>
+	 *
+	 * @param x sampel pertama (makespan)
+	 * @param y sampel kedua (energi)
+	 * @return koefisien korelasi r (NaN bila salah satu sampel tidak bervariasi)
+	 */
 	static double pearson(double[] x, double[] y) {
 		int n = x.length;
 		double meanX = Arrays.stream(x).average().orElse(0);

@@ -1,0 +1,2 @@
+timestamp,dataset,tasks,k_percent,makespan_s,analytic_makespan_s,energy_kwh,avg_response_s,utilization_pct,di_all_vm,di_used_vm,throughput_task_s,cost_usd,scheduling_ms
+2026-10-16T19:33:07,dataset,5,20.0,90.2100,90.0000,0.018587,48.1900,5.56,17.9709,1.5584,0.0554,383.7707,0.643

@@ -1,0 +1,2 @@
+timestamp,dataset,tasks,k_percent,makespan_s,analytic_makespan_s,energy_kwh,avg_response_s,utilization_pct,di_all_vm,di_used_vm,throughput_task_s,cost_usd,scheduling_ms
+2026-10-16T19:48:28,GoCJ_Dataset_500,500,20.0,776.5468,765.1500,0.172937,382.4803,20.48,4.8840,0.0478,0.6439,2122.4906,1.110

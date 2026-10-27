@@ -1,0 +1,127 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30100
+        hostPort: 9100
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30101
+        hostPort: 9101
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30102
+        hostPort: 9102
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30103
+        hostPort: 9103
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30104
+        hostPort: 9104
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30105
+        hostPort: 9105
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30106
+        hostPort: 9106
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30107
+        hostPort: 9107
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30108
+        hostPort: 9108
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30109
+        hostPort: 9109
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30110
+        hostPort: 9110
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30111
+        hostPort: 9111
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30112
+        hostPort: 9112
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30113
+        hostPort: 9113
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30114
+        hostPort: 9114
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30115
+        hostPort: 9115
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30116
+        hostPort: 9116
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30117
+        hostPort: 9117
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30118
+        hostPort: 9118
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+      - containerPort: 30119
+        hostPort: 9119
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "soka.dc=DC-1,soka.host=dc1-hostA0,soka.host_type=A"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "soka.dc=DC-1,soka.host=dc1-hostA1,soka.host_type=A"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "soka.dc=DC-1,soka.host=dc1-hostA2,soka.host_type=A"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "soka.dc=DC-2,soka.host=dc2-hostB0,soka.host_type=B"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "soka.dc=DC-2,soka.host=dc2-hostB1,soka.host_type=B"
+  - role: worker
+    kubeadmConfigPatches:
+      - |
+        kind: JoinConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "soka.dc=DC-2,soka.host=dc2-hostB2,soka.host_type=B"
