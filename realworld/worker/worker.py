@@ -42,7 +42,8 @@ Alur satu POST /batch:
 
 import json
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import time
 
 # Identitas dan port worker, diisi dari "environment" di docker-compose.yml.
@@ -53,6 +54,7 @@ PORT = int(os.environ.get("PORT", "8000"))
 # path v1 disediakan sebagai cadangan untuk sistem lama.
 CPU_STAT_V2 = "/sys/fs/cgroup/cpu.stat"                # cgroup v2: usage_usec
 CPU_USAGE_V1 = "/sys/fs/cgroup/cpuacct/cpuacct.usage"  # cgroup v1: nanodetik
+BATCH_LOCK = threading.Lock()
 
 
 def burn(iterations):
@@ -123,9 +125,8 @@ def run_batch(tasks):
 class Handler(BaseHTTPRequestHandler):
     """Penangan request HTTP worker (endpoint /health dan /batch).
 
-    Server memakai HTTPServer biasa (bukan ThreadingHTTPServer), jadi hanya satu
-    request yang dilayani pada satu waktu. Ini sejalan dengan model satu VM =
-    satu antrean eksekusi.
+    Request ditangani pada thread terpisah agar /health tetap responsif selama
+    batch berjalan. BATCH_LOCK menjaga satu batch aktif pada satu waktu per VM.
     """
 
     def _reply(self, payload, status=200):
@@ -159,20 +160,21 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/batch":
             self._reply({"error": "not found"}, 404)
             return
-        # Baca body JSON sesuai panjang yang dinyatakan header Content-Length.
-        length = int(self.headers.get("Content-Length", "0"))
-        request = json.loads(self.rfile.read(length) or b"{}")
-        # HTTP/1.0 tanpa Content-Length: setiap baris langsung terkirim ke runner,
-        # sehingga runner bisa menampilkan cloudlet yang selesai secara real-time.
-        # (Akhir balasan ditandai dengan koneksi ditutup setelah request selesai.)
-        self.send_response(200)
-        self.send_header("Content-Type", "application/x-ndjson")
-        self.end_headers()
-        # CPU kumulatif sebelum batch; selisih dengan nilai sesudah batch = CPU batch ini.
-        cpu_before = cgroup_cpu_seconds()
-        for task_id, t in run_batch(request.get("tasks", [])):
-            self._send_line({"id": task_id, "finish": t})
-        self._send_line({"vm": VM_NAME, "cpu_s": cgroup_cpu_seconds() - cpu_before})
+        with BATCH_LOCK:
+            # Baca body JSON sesuai panjang yang dinyatakan header Content-Length.
+            length = int(self.headers.get("Content-Length", "0"))
+            request = json.loads(self.rfile.read(length) or b"{}")
+            # HTTP/1.0 tanpa Content-Length: setiap baris langsung terkirim ke runner,
+            # sehingga runner bisa menampilkan cloudlet yang selesai secara real-time.
+            # (Akhir balasan ditandai dengan koneksi ditutup setelah request selesai.)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.end_headers()
+            # CPU kumulatif sebelum batch; selisih dengan nilai sesudah batch = CPU batch ini.
+            cpu_before = cgroup_cpu_seconds()
+            for task_id, t in run_batch(request.get("tasks", [])):
+                self._send_line({"id": task_id, "finish": t})
+            self._send_line({"vm": VM_NAME, "cpu_s": cgroup_cpu_seconds() - cpu_before})
 
     def _send_line(self, payload):
         """Tulis satu baris NDJSON lalu flush agar langsung terkirim, tidak tertahan buffer."""
@@ -186,4 +188,4 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     # Dengarkan di semua interface container; Docker meneruskan 127.0.0.1:91xx host ke sini.
-    HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

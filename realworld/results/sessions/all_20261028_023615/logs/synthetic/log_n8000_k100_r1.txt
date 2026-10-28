@@ -1,0 +1,15 @@
+scheduler=KPB(k=100.0%) realworld, placement cocok dengan CloudSim
+dataset=/home/exileerr/soka-a-5/src/main/resources/dataset/Synthetic_Dataset_8000.txt tasks=8000 repeat=1 itersPerMI=7 scale=0.0098 (locked)
+[run 1] menjalankan task di container... (prediksi analitik ±141.2 s)
+  makespan=428.533s (nyata/prediksi=3.034x), energy=0.113869 kWh, avgResponse=211.979s, utilization=97.00%, DI=0.1030 (VM terpakai 0.1030), throughput=18.668 task/s, cost=$579.52, schedulingTime=15.031 ms, vmsUsed=20/20
+rata-rata ± std dari 1 run:
+  makespan_s             428.5327 ± 0.0000
+  energy_kwh               0.1139 ± 0.0000
+  avg_response_s         211.9789 ± 0.0000
+  utilization_pct         96.9951 ± 0.0000
+  di_all_vm                0.1030 ± 0.0000
+  di_used_vm               0.1030 ± 0.0000
+  throughput_task_s       18.6684 ± 0.0000
+  cost_usd               579.5192 ± 0.0000
+  scheduling_ms           15.0314 ± 0.0000
+hasil -> /home/exileerr/soka-a-5/realworld/results/sessions/all_20261028_023615/summary.csv, /home/exileerr/soka-a-5/realworld/results/sessions/all_20261028_023615/aggregate.csv, /home/exileerr/soka-a-5/realworld/results/sessions/all_20261028_023615/tasks_Synthetic_Dataset_8000_n8000_k100_run*.csv

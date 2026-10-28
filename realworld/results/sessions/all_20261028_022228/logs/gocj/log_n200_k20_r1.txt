@@ -1,0 +1,2 @@
+[ERROR] vm12 (http://127.0.0.1:9112) tidak merespons: timed out
+        Jalankan worker dengan Docker Compose atau deploy Kind (kubectl apply -f k8s-topology.yaml); pastikan port 9100-9119 tersedia

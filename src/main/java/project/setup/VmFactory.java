@@ -54,7 +54,6 @@ public final class VmFactory {
 	private VmFactory() { }
 
 	// Total 20 VM = 4 V3 + 8 V2 + 8 V1, dibuat berurutan sesuai VmType.values().
-	
 	public static List<Vm> createDefaultVms() {
 		List<Vm> vms = new ArrayList<>();
 		for (VmType type : VmType.values()) {

@@ -789,6 +789,23 @@ SCENARIOS="100 200" REPS=1 bash run_grid.sh       # sebagian
 
 Skrip menolak berjalan bila Windows tidak dalam mode daya "Best performance" dengan charger terpasang (`FORCE=1` untuk melewati), karena kecepatan core laptop bisa berubah hingga ±50% antar mode daya.
 
+Untuk menjalankan **semua dataset pada cluster Kubernetes/Kind atau Docker** dalam satu sesi, gunakan skrip berikut dari folder `realworld/`:
+
+```bash
+bash run_all_scenarios.sh
+```
+
+Default-nya menjalankan GoCJ 100–1.000 (kelipatan 100) dan Synthetic 1.000–10.000 (kelipatan 1.000), masing-masing untuk k = 20/50/100 dengan 1 repetisi (60 skenario). Synthetic menggunakan 7 iterasi/MI agar beban lebih ringan; GoCJ menggunakan 14 iterasi/MI. Seluruh worker pada port 9100–9119 harus sehat sebelum skrip berjalan. Eksperimen synthetic lengkap dapat memakan waktu berjam-jam; proses berhenti jika satu skenario gagal dan log skenario tersimpan di folder sesi.
+
+Hasil disimpan di folder baru `results/sessions/all_<timestamp>/`: `summary.csv` mencatat setiap run, `tasks_*.csv` berisi detail tiap task, dan `logs/gocj/grid_summary.csv` serta `logs/synthetic/grid_summary.csv` merangkum mean ± std per ukuran dataset dan k (termasuk repetisi tambahan). Log tiap run dan mapping KPB ada di subfolder `logs/` dan `mappings/`. Folder output dapat ditentukan dengan `SESSION=/path/baru`.
+
+Parameter yang dapat diubah bila ingin menguji sebagian dataset atau menambah repetisi:
+
+```bash
+GOCJ_SCENARIOS="100 500 1000" SYNTHETIC_SCENARIOS="1000 5000" \
+REPS=2 bash run_all_scenarios.sh
+```
+
 Seluruh 9 kombinasi S1–S3 × 3 repetisi, sama seperti tabel 7.4 (±30 menit). `--quiet` dipakai supaya log tidak berisi ribuan baris per cloudlet:
 
 ```bash
@@ -1132,6 +1149,9 @@ Selain output terminal, pastikan Pod masih sehat dan hasil CSV sudah dibuat:
 kubectl get pods -A -l app=soka-vm
 ls -lt results/sessions
 ```
+![alt text](image.png)
+![alt text](<WhatsApp Image 2026-10-28 at 13.50.58.jpeg>)
+![alt text](<WhatsApp Image 2026-10-28 at 13.51.13.jpeg>)
 
 Runner membuat folder sesi di `realworld/results/sessions/` (atau path yang ditentukan `--out`), berisi `summary.csv`, `aggregate.csv`, detail per-task, dan JSON mapping. Untuk tes singkat dengan folder output eksplisit, tambahkan `--out results_demo_k8s`.
 

@@ -1,0 +1,2 @@
+dataset,tasks,k_percent,runs,makespan_s_mean,makespan_s_std,energy_kwh_mean,energy_kwh_std,avg_response_s_mean,avg_response_s_std,utilization_pct_mean,utilization_pct_std,di_all_vm_mean,di_all_vm_std,di_used_vm_mean,di_used_vm_std,throughput_task_s_mean,throughput_task_s_std,cost_usd_mean,cost_usd_std,scheduling_ms_mean,scheduling_ms_std
+GoCJ_Dataset_100,10,20,1,0.61,0.0,0.000142,0.0,0.33893,0.0,15.786066,0.0,6.334701,0.0,0.385482,0.0,16.393443,0.0,66.012,0.0,0.114216,0.0

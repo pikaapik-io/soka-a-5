@@ -1,0 +1,11 @@
+gocj_scenarios=200 300 400 500 600 700 800 900 1000
+synthetic_scenarios=1000 2000 3000 4000 5000 6000 7000 8000 9000 10000
+ks=20 50 100
+repetitions=1
+iters_per_mi_gocj=14
+iters_per_mi_synthetic=7
+pause_s=2
+started=2026-10-28T02:36:15+07:00
+scale_gocj=0.019562
+scale_synthetic=0.009789
+finished=2026-10-28T06:00:32+07:00
