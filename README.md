@@ -1008,6 +1008,9 @@ Ringkasan dari hasil 7.4, ditambah dua temuan yang tidak langsung terlihat dari 
 
 ### 7.8 Deployment Kubernetes (Kind)
 
+ARSITEKTUR
+<img width="757" height="751" alt="image" src="https://github.com/user-attachments/assets/02858e3b-f13d-432c-8cfa-d1439164f428" />
+
 Deployment berikut menjalankan topologi yang sama pada Kubernetes lokal:
 
 - 1 cluster Kind dengan 1 control-plane dan **6 worker node** berlabel 3 host DC-1 dan 3 host DC-2.
